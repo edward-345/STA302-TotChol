@@ -282,3 +282,20 @@ summary(final.model)
 
 plot(final.model)
 ```
+```{r, message=FALSE}
+cooks <- cooks.distance(reduced.model)
+plot(reduced.model, which = 4)
+
+# All diagonistic plots
+par(mfrow = c(2, 2))
+plot(reduced.model, which = c(1, 2, 3, 4))
+```
+
+```{r, message=FALSE}
+cooks <- cooks.distance(final.model)
+plot(final.model, which = 4)
+
+# All diagonistic plots
+par(mfrow = c(2, 2))
+plot(final.model, which = c(1, 2, 3, 4))
+```
