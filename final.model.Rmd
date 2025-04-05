@@ -1,5 +1,5 @@
 ---
-title: "final.model"
+title: "Final Model(?)"
 author: "Edward J. Lee"
 date: "2025-04-05"
 output: pdf_document
@@ -240,13 +240,13 @@ reduced.model <- lm(pb.TotChol ~ Age + pb.Age2 + Height + BPSysAve + BPDiaAve,
 ```
 ```{r, message=FALSE}
 leverage <- hatvalues(reduced.model)
-leverage
+#leverage
 
 ## Threshold
 p <- 5
 high_lev <- 2*(p+1)/n
-high_lev
-
+#high_lev
+```
 ## Find the leverage points
 leverage_points_index <- which(leverage > high_lev)
 leverage_points_index
@@ -261,13 +261,24 @@ st.residuals
 outliers_index <- which(abs(st.residuals)>3)
 outliers_index
 
-```
 
 ```{r}
-#test commit
-summary(reduced.model)
-#test commit
-#test commit
-#test commit #2
-summary(NHANES)
+#FINDING INFLUENTIAL POINTS USING RESIDUALS VS LEVERAGE
+plot(reduced.model)
+
+#TABLE OF INFLUENTIAL OBSERVATIONS
+influential_points <- c(410, 774, 1047)
+p.BXCX.frame[influential_points, ]
+
+
+reduced.frame <- p.BXCX.frame %>% 
+  dplyr::filter(!row_number() %in% c(410, 774, 1047))
+
+final.model <- lm(pb.TotChol ~ Age + pb.Age2 + Height + BPSysAve + BPDiaAve,
+                        data = reduced.frame)
+```
+```{r, message=FALSE}
+summary(final.model)
+
+plot(final.model)
 ```
