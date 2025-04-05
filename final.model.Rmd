@@ -1,0 +1,271 @@
+---
+title: "final.model"
+author: "Edward J. Lee"
+date: "2025-04-05"
+output: pdf_document
+---
+## Usual Data Cleaning
+```{r, message=FALSE}
+library(NHANES)  # NHANES dataset
+library(dplyr)   # Data wrangling
+library(ggplot2) # Visualization
+library(car)     # Multicollinearity check (VIF)
+library(ggResidpanel) # Advanced diagnostic plots
+library(knitr) #for kable
+library(gridExtra) #for scatterplot matrix
+
+# if you don't have it installed, do install_packages("NHANES")
+data("NHANES")
+nrow(NHANES) #10,000 observations
+
+# remove babies (ages 0-3)
+nhanes_filtered <- NHANES %>% filter(Age > 20)
+nrow(nhanes_filtered) #7094 observations
+
+# remove NA entries and only select columns of interest
+nhanes_data <- nhanes_filtered %>% 
+  dplyr::select(Height, Age, Weight, BPSysAve, BPDiaAve,
+                TotChol, SmokeNow, PhysActiveDays) %>%
+  na.omit() 
+
+# categorical predictors
+nhanes_data$SmokeNow <- as.factor(nhanes_data$SmokeNow)
+nhanes_data <- data.frame(nhanes_data)
+
+# fit the model
+model <- lm(TotChol ~ Age + Weight + Height + BPSysAve + BPDiaAve + SmokeNow +
+              PhysActiveDays, 
+            data = nhanes_data)
+
+n <- nrow(nhanes_data)
+```
+
+## Box-Cox Transformation and Polynomial Term
+```{r, message=FALSE}
+#POLYNOMIAL "AGE" TERM
+pb_data <- nhanes_data %>% 
+  dplyr::select(Height, Age, Weight, BPSysAve, BPDiaAve,
+                TotChol, SmokeNow, PhysActiveDays) %>% 
+  mutate(pb.Age2 = Age^2) 
+
+pb_model <- lm(TotChol~Age+pb.Age2+Height+Weight+BPSysAve+BPDiaAve+
+                 SmokeNow+PhysActiveDays, data=pb_data)
+
+#BOX COX TRANSFORMATION
+library(MASS) #For BOXCOX
+
+pb.b <- boxcox(pb_model)
+
+pb.lambda <- pb.b$x[which.max(pb.b$y)]
+
+pb.log_product <- sum(log(pb_data$TotChol))
+pb.geo_mean <- exp(pb.log_product/n)
+
+pb.TotChol <- pb.geo_mean^(1-pb.lambda)*(pb_data$TotChol^pb.lambda - 1)/pb.lambda
+
+
+p.BXCX.frame <- pb_data %>% 
+  dplyr::select(-TotChol) %>% 
+  mutate(pb.TotChol = pb.TotChol)
+
+p.BXCX.model <- lm(pb.TotChol ~ Age + pb.Age2 + Weight + Height + BPSysAve + 
+                          BPDiaAve + SmokeNow + PhysActiveDays,
+                        data = p.BXCX.frame)
+
+summary(p.BXCX.model)
+```
+
+```{r, message=FALSE}
+#FITTED AND RESIDUAL VALUES FROM TRANSFORMED
+pb.fitted <- fitted(p.BXCX.model)
+pb.residuals <- resid(p.BXCX.model)
+
+#DATA FRAME FOR PLOTTING
+pb.plot_data <- data.frame(pb.fitted = pb.fitted, pb.residuals = pb.residuals)
+
+#PAIRWISE PLOTS OF ORIGINAL MODEL
+pairs(~pb.TotChol+Age+pb.Age2+Weight+Height+
+        BPSysAve+BPDiaAve+SmokeNow+PhysActiveDays,
+      data = p.BXCX.frame, 
+      main = "Pairwise ScatterPlots of Transformed Polynomial Model",
+      col = "blue")
+```
+
+## Residual Plots
+```{r, message=FALSE}
+#RESIDUALS VS FITTED
+res_fitted_plot <- ggplot(data = pb.plot_data,
+                          aes(x = pb.fitted, y = pb.residuals)) +
+  geom_point(color = "blue", alpha = 0.5) +
+  geom_hline(yintercept = 0, color = "red") +
+  labs(title = "Residuals vs Fitted Values (BXCX and Poly)", 
+       x = "Fitted Values", y = "Residuals")
+
+print(res_fitted_plot)
+```
+\newpage
+```{r, message=FALSE}
+#NORMAL QQ PLOT
+qq_plot <- ggplot(data = data.frame(pb.residuals = pb.residuals),
+                  aes(sample = pb.residuals)) +
+  stat_qq() +
+  stat_qq_line(color = "red") +
+  labs(title = "Normal Q-Q Plot (BXCX and Poly)",
+       x = "Theoretical Quantiles", y = "Sample Quantiles")
+
+print(qq_plot)
+```
+
+```{r, message=FALSE}
+#RESIDUALS VS AGE
+res_age_plot <- ggplot(p.BXCX.frame,
+                       aes(x = Age, y = pb.residuals)) +
+  geom_point(color = "blue", alpha = 0.5) +
+  geom_hline(yintercept = 0, color = "red") +
+  labs(title = "Residuals vs Age (BXCX and Poly)",
+       x = "Age", y = "Residuals")
+
+print(res_age_plot)
+```
+
+```{r, message=FALSE}
+#RESIDUALS VS WEIGHT
+res_weight_plot <- ggplot(p.BXCX.frame,
+                          aes(x = Weight, y = pb.residuals)) +
+  geom_point(color = "blue", alpha = 0.5) +
+  geom_hline(yintercept = 0, color = "red") +
+  labs(title = "Residuals vs Weight (BXCX and Poly)",
+       x = "Weight", y = "Residuals")
+
+print(res_weight_plot)
+```
+
+```{r, message=FALSE}
+#RESIDUALS VS HEIGHT
+res_height_plot <- ggplot(p.BXCX.frame,
+                          aes(x = Height, y = pb.residuals)) +
+  geom_point(color = "blue", alpha = 0.5) +
+  geom_hline(yintercept = 0, color = "red") +
+  labs(title = "Residuals vs Height (BXCX and Poly)",
+       x = "Height", y = "Residuals")
+
+print(res_height_plot)
+```
+
+```{r, message=FALSE}
+#RESIDUALS VS BPSysAve
+res_BPSysAve_plot <- ggplot(p.BXCX.frame,
+                            aes(x = BPSysAve, y = pb.residuals)) +
+  geom_point(color = "blue", alpha = 0.5) +
+  geom_hline(yintercept = 0, color = "red") +
+  labs(title = "Residuals vs BPSysAve (BXCX and Poly)",
+       x = "Average Systolic Blood Pressure", y = "Residuals")
+
+print(res_BPSysAve_plot)
+```
+
+```{r, message=FALSE}
+#RESIDUALS VS BPDiaAve
+res_BPDiaAve_plot <- ggplot(p.BXCX.frame,
+                            aes(x = BPDiaAve, y = pb.residuals)) +
+  geom_point(color = "blue", alpha = 0.5) +
+  geom_hline(yintercept = 0, color = "red") +
+  labs(title = "Residuals vs BPDiasAve (BXCX and Poly)",
+       x = "Average Diastolic Blood Pressure", y = "Residuals")
+
+print(res_BPDiaAve_plot)
+```
+
+```{r, message=FALSE}
+#RESIDUALS VS SmokeNow (BOXPLOT)
+res_smoke_plot <- ggplot(
+  p.BXCX.frame, aes(x = as.factor(SmokeNow), y = pb.residuals)) +
+  geom_boxplot(fill = "lightblue", color = "darkblue", alpha = 0.7) +
+  geom_hline(yintercept = 0, color = "red", linetype = "dashed") +
+  theme_minimal() +
+  ggtitle("Residuals vs Current Smoker (BXCX and Poly)") +
+  xlab("Currently Smokes") +
+  ylab("Residuals") +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1, size = 8))
+
+print(res_smoke_plot)
+```
+
+```{r, message=FALSE}
+#RESIDUALS VS PhysActiveDays (BOXPLOT)
+res_active_plot <- ggplot(
+  p.BXCX.frame,
+  aes(x = as.factor(PhysActiveDays), y = pb.residuals)) +
+  geom_boxplot(fill = "lightblue", color = "darkblue", alpha = 0.7) +
+  geom_hline(yintercept = 0, color = "red", linetype = "dashed") +
+  theme_minimal() +
+  ggtitle("Residuals vs Physically Active Days") +
+  xlab("Days in a Week of Physical Activity") +
+  ylab("Residuals") +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1, size = 8))
+
+print(res_active_plot)
+```
+
+
+
+```{r, message=FALSE}
+tr_stres_values <- rstandard(p.BXCX.model)
+
+tr_stres_plot <- hist(tr_stres_values,
+                          xlab = "Standardized Residuals",
+                          main = "Standardized Residual Histogram")
+
+```
+
+```{r, message=FALSE}
+library(leaps)
+
+best_subset_p.BXCX <- regsubsets(pb.TotChol~., data=p.BXCX.frame,nvmax=7,                  nbest=1,really.big=TRUE,method="exhaustive")
+
+summary(best_subset_p.BXCX)
+
+plot(best_subset_p.BXCX,scale='adjr2')
+plot(best_subset_p.BXCX,scale='bic');
+plot(best_subset_p.BXCX,scale='Cp')
+```
+
+```{r, message=FALSE}
+AIC_p.BXCX <- step(p.BXCX.model, direction="both")
+
+summary(AIC_p.BXCX)
+
+reduced.model <- lm(pb.TotChol ~ Age + pb.Age2 + Height + BPSysAve + BPDiaAve,
+                        data = p.BXCX.frame)
+```
+```{r, message=FALSE}
+leverage <- hatvalues(reduced.model)
+leverage
+
+## Threshold
+p <- 5
+high_lev <- 2*(p+1)/n
+high_lev
+
+## Find the leverage points
+leverage_points_index <- which(leverage > high_lev)
+leverage_points_index
+rownames(p.BXCX.frame)[leverage_points_index]
+
+
+## Check if the absolute values of the standardized residuals are greater than 3
+st.residuals <- rstandard(reduced.model) ## standardized residuals
+st.residuals
+
+## Outliers
+outliers_index <- which(abs(st.residuals)>3)
+outliers_index
+
+```
+
+```{r}
+#test commit
+summary(reduced.model)
+#test commit
+#test commit
+```
