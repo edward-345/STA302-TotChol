@@ -268,4 +268,6 @@ outliers_index
 summary(reduced.model)
 #test commit
 #test commit
+#test commit #2
+summary(NHANES)
 ```
