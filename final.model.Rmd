@@ -24,17 +24,13 @@ nrow(nhanes_filtered) #7094 observations
 
 # remove NA entries and only select columns of interest
 nhanes_data <- nhanes_filtered %>% 
-  dplyr::select(Height, Age, Weight, BPSysAve, BPDiaAve,
+  dplyr::select(Height, Age, Weight, BPSysAve, BPDiaAve, BPDia1, BPDia2, BPDia3, BPSys1, BPSys2, BPSys3,
                 TotChol, SmokeNow, PhysActiveDays) %>%
   na.omit() %>%
   dplyr::filter(
-    Height > 0,
-    Weight > 0,
-    BPSysAve > 1,    # Realistic minimum for systolic BP
-    BPDiaAve > 1,    # Realistic minimum for diastolic BP
-    TotChol > 0
-  )
-
+    Height > 0, Weight > 0, BPDia1 > 10, BPDia2 > 10, BPDia3 > 10, BPSys1 > 10, BPSys2 > 10, BPSys3 > 10, TotChol > 0) %>% dplyr::select(Height, Age, Weight, BPSysAve, BPDiaAve,
+                TotChol, SmokeNow, PhysActiveDays)
+  
 # categorical predictors
 nhanes_data$SmokeNow <- as.factor(nhanes_data$SmokeNow)
 nhanes_data <- data.frame(nhanes_data)
@@ -274,7 +270,7 @@ outliers_index
 plot(reduced.model)
 
 #TABLE OF INFLUENTIAL OBSERVATIONS
-influential_points <- c(11, 1045, 1269)
+influential_points <- c(823, 968, 1175)
 p.BXCX.frame[influential_points, ]
 
 
