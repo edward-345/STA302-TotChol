@@ -19,7 +19,19 @@ data("NHANES")
 nrow(NHANES) #10,000 observations
 
 # remove babies (ages 0-3)
-nhanes_filtered <- NHANES %>% filter(Age > 20)
+nhanes_filtered <- NHANES %>% filter(Age > 20,
+                                     Height > 0,
+                                     Weight > 0,
+                                     BPDia1 > 10,
+                                     BPDia2 > 10,
+                                     BPDia3 > 10,
+                                     BPDiaAve > 10,
+                                     BPSys1 > 10,
+                                     BPSys2 > 10,
+                                     BPSys3 > 10,
+                                     BPSysAve > 10,
+                                     TotChol > 0)
+
 nrow(nhanes_filtered) #7094 observations
 
 # remove NA entries and only select columns of interest
@@ -27,6 +39,7 @@ nhanes_data <- nhanes_filtered %>%
   dplyr::select(Height, Age, Weight, BPSysAve, BPDiaAve,
                 TotChol, SmokeNow, PhysActiveDays) %>%
   na.omit() 
+  
 
 # categorical predictors
 nhanes_data$SmokeNow <- as.factor(nhanes_data$SmokeNow)
@@ -52,7 +65,7 @@ pb_model <- lm(TotChol~Age+pb.Age2+Height+Weight+BPSysAve+BPDiaAve+
                  SmokeNow+PhysActiveDays, data=pb_data)
 
 #BOX COX TRANSFORMATION
-library(MASS) #For BOXCOX
+library(MASS)
 
 pb.b <- boxcox(pb_model)
 
@@ -221,75 +234,75 @@ tr_stres_plot <- hist(tr_stres_values,
 leverage <- hatvalues(p.BXCX.model)
 
 
-## Threshold
+##LEVERAGE POINTS
 p <- 8
 high_lev <- 2*(p+1)/n
 
+leverage_points <- p.BXCX.frame[leverage > high_lev,]
+leverage_points <- leverage_points %>% 
+  mutate(row = row.names(leverage_points))
 
-## Find the leverage points
-leverage_points_index <- which(leverage > high_lev)
-
-leverage_frame <- p.BXCX.frame %>% 
-  filter(row_number() %in% leverage_points_index)
-#Rows 410, 774, 1288 have misinputs in BPDiaAve, entry says 0
 
 #FINDING OUTLIERS
-st.residuals <- rstandard(reduced.model) 
+st.residuals <- rstandard(p.BXCX.model) 
 
-#Definition of outlier on page 9 of Mar 19th slides
-outliers_index <- which(abs(st.residuals)>4)
+outlier_points <- p.BXCX.frame[abs(st.residuals) > 4,]
 
-outlier_frame <- p.BXCX.frame %>% 
-  filter(row_number() %in% outliers_index)
-#This outlier point is NOT AND INFLUENTIAL POINT
+#COOKS DISTANCE
+cooks_value <- cooks.distance(p.BXCX.model)
 
-#FILTERED DATAFRAME EXCLUDING MISINPUT VARIABLES
-filtered_data <- p.BXCX.frame %>% 
-  filter(!(row_number() %in% c(410, 774, 1288)))
-```
+f_value <- qf(0.50, 8, 1280)
 
+cooks_points <- p.BXCX.frame[cooks_value > f_value,]
 
-```{r, message=FALSE}
-summary(final.model)
+#DFFITS
+dffits_cutoff <- 2*(sqrt((p+1)/n))
 
-plot(final.model)
-```
+dffits_value = dffits(p.BXCX.model)
 
-```{r, message=FALSE}
-cooks <- cooks.distance(reduced.model)
-plot(reduced.model, which = 4)
+dffits_points <- p.BXCX.frame[(abs(dffits_value) > dffits_cutoff),]
+dffits_points <- dffits_points %>% 
+  mutate(row = row.names(dffits_points))
 
-# All diagonistic plots
-par(mfrow = c(2, 2))
-plot(reduced.model, which = c(1, 2, 3, 4))
-```
+#DFBETAS
+dfbetas_cutoff <- 2/sqrt(n)
 
-```{r, message=FALSE}
-cooks <- cooks.distance(final.model)
-plot(final.model, which = 4)
+dfbeta_frame <- as.data.frame(dfbetas(p.BXCX.model)) 
 
-# All diagonistic plots
-par(mfrow = c(2, 2))
-plot(final.model, which = c(1, 2, 3, 4))
+dfbeta_points <- round(dfbeta_frame[apply(
+  abs(dfbeta_frame)>dfbetas_cutoff,1,any),],4)
+dfbeta_points <- dfbeta_points %>% 
+  mutate(row = row.names(dfbeta_points))
+
+#Problematic observations
+influential_points <- c(728,823)
+p.BXCX.frame[influential_points, ]
+
+clean.frame <- p.BXCX.frame %>%
+dplyr::filter(!row_number() %in% influential_points)
+
+clean_model <- lm(pb.TotChol ~ Age + pb.Age2 + Weight + Height + BPSysAve + 
+    BPDiaAve + SmokeNow + PhysActiveDays, data = clean.frame)
+
+summary(clean_model)
+
+plots <- plot(p.BXCX.model)
 ```
 
 ```{r, message=FALSE}
 library(leaps)
 
-best_subset_p.BXCX <- regsubsets(pb.TotChol~., data=p.BXCX.frame,nvmax=7,                  nbest=1,really.big=TRUE,method="exhaustive")
+best_subset <- regsubsets(pb.TotChol~., data=clean.frame,nvmax=8,                  nbest=1,really.big=TRUE,method="exhaustive")
 
-summary(best_subset_p.BXCX)
+summary(best_subset)
 
-plot(best_subset_p.BXCX,scale='adjr2')
-plot(best_subset_p.BXCX,scale='bic');
-plot(best_subset_p.BXCX,scale='Cp')
+plot(best_subset,scale='adjr2')
+plot(best_subset,scale='bic');
+plot(best_subset,scale='Cp')
 ```
 
 ```{r, message=FALSE}
-AIC_p.BXCX <- step(p.BXCX.model, direction="both")
+AIC <- step(clean_model, direction="both")
 
-summary(AIC_p.BXCX)
-
-reduced.model <- lm(pb.TotChol ~ Age + pb.Age2 + Height + BPSysAve + BPDiaAve,
-                        data = p.BXCX.frame)
+summary(AIC)
 ```
