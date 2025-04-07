@@ -306,3 +306,35 @@ AIC <- step(clean_model, direction="both")
 
 summary(AIC)
 ```
+
+```{r, message=FALSE}
+#PREDICTION ACCURACY
+set.seed(123)
+train_index <- sample(1:nrow(clean.frame), 0.7 * nrow(clean.frame))
+train_data <- clean.frame[train_index, ]
+test_data <- clean.frame[-train_index, ]
+
+validation_model <- lm(pb.TotChol ~ Age + pb.Age2 + Height + BPSysAve + BPDiaAve,
+                        data = train_data)
+predictions <- predict(validation_model, newdata = test_data)
+
+# Compare predictions to actual
+mean((predictions - test_data$pb.TotChol)^2)  # MSE
+sqrt(mean((predictions - test_data$pb.TotChol)^2))  # RMSE
+
+
+
+```
+```{r, message=FALSE}
+library(caret)
+
+#K-Fold (10-Fold)
+train_control <- trainControl(method = "cv", number = 10)
+cv_model <- train(
+  pb.TotChol ~ ., data = clean.frame,
+  method = "lm",
+  trControl = train_control
+)
+
+print(cv_model)
+```
