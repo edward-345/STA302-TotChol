@@ -302,3 +302,36 @@ plot(final.model, which = 4)
 par(mfrow = c(2, 2))
 plot(final.model, which = c(1, 2, 3, 4))
 ```
+
+
+```{r, message=FALSE}
+#Prediction accuracy
+set.seed(123)
+train_index <- sample(1:nrow(reduced.frame), 0.7 * nrow(reduced.frame))
+train_data <- reduced.frame[train_index, ]
+test_data <- reduced.frame[-train_index, ]
+
+validation.final.model <- lm(pb.TotChol ~ Age + pb.Age2 + Height + BPSysAve + BPDiaAve,
+                        data = train_data)
+predictions <- predict(validation.final.model, newdata = test_data)
+
+# Compare predictions to actual
+mean((predictions - test_data$pb.TotChol)^2)  # MSE
+sqrt(mean((predictions - test_data$pb.TotChol)^2))  # RMSE
+
+```
+
+
+```{r, message=FALSE}
+library(caret)
+#K-Fold (10-Fold)
+train_control <- trainControl(method = "cv", number = 10)
+cv_model <- train(
+  pb.TotChol ~ ., data = reduced.frame,
+  method = "lm",
+  trControl = train_control
+)
+
+print(cv_model)
+
+```
