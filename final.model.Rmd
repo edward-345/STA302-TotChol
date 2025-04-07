@@ -217,6 +217,61 @@ tr_stres_plot <- hist(tr_stres_values,
                           main = "Standardized Residual Histogram")
 
 ```
+```{r, message=FALSE}
+leverage <- hatvalues(p.BXCX.model)
+
+
+## Threshold
+p <- 8
+high_lev <- 2*(p+1)/n
+
+
+## Find the leverage points
+leverage_points_index <- which(leverage > high_lev)
+
+leverage_frame <- p.BXCX.frame %>% 
+  filter(row_number() %in% leverage_points_index)
+#Rows 410, 774, 1288 have misinputs in BPDiaAve, entry says 0
+
+#FINDING OUTLIERS
+st.residuals <- rstandard(reduced.model) 
+
+#Definition of outlier on page 9 of Mar 19th slides
+outliers_index <- which(abs(st.residuals)>4)
+
+outlier_frame <- p.BXCX.frame %>% 
+  filter(row_number() %in% outliers_index)
+#This outlier point is NOT AND INFLUENTIAL POINT
+
+#FILTERED DATAFRAME EXCLUDING MISINPUT VARIABLES
+filtered_data <- p.BXCX.frame %>% 
+  filter(!(row_number() %in% c(410, 774, 1288)))
+```
+
+
+```{r, message=FALSE}
+summary(final.model)
+
+plot(final.model)
+```
+
+```{r, message=FALSE}
+cooks <- cooks.distance(reduced.model)
+plot(reduced.model, which = 4)
+
+# All diagonistic plots
+par(mfrow = c(2, 2))
+plot(reduced.model, which = c(1, 2, 3, 4))
+```
+
+```{r, message=FALSE}
+cooks <- cooks.distance(final.model)
+plot(final.model, which = 4)
+
+# All diagonistic plots
+par(mfrow = c(2, 2))
+plot(final.model, which = c(1, 2, 3, 4))
+```
 
 ```{r, message=FALSE}
 library(leaps)
@@ -237,65 +292,4 @@ summary(AIC_p.BXCX)
 
 reduced.model <- lm(pb.TotChol ~ Age + pb.Age2 + Height + BPSysAve + BPDiaAve,
                         data = p.BXCX.frame)
-```
-```{r, message=FALSE}
-leverage <- hatvalues(reduced.model)
-#leverage
-
-## Threshold
-p <- 5
-high_lev <- 2*(p+1)/n
-#high_lev
-```
-## Find the leverage points
-leverage_points_index <- which(leverage > high_lev)
-leverage_points_index
-rownames(p.BXCX.frame)[leverage_points_index]
-
-
-## Check if the absolute values of the standardized residuals are greater than 3
-st.residuals <- rstandard(reduced.model) ## standardized residuals
-st.residuals
-
-## Outliers
-outliers_index <- which(abs(st.residuals)>3)
-outliers_index
-
-
-```{r}
-#FINDING INFLUENTIAL POINTS USING RESIDUALS VS LEVERAGE
-plot(reduced.model)
-
-#TABLE OF INFLUENTIAL OBSERVATIONS
-influential_points <- c(410, 774, 1047)
-p.BXCX.frame[influential_points, ]
-
-
-reduced.frame <- p.BXCX.frame %>% 
-  dplyr::filter(!row_number() %in% c(410, 774, 1047))
-
-final.model <- lm(pb.TotChol ~ Age + pb.Age2 + Height + BPSysAve + BPDiaAve,
-                        data = reduced.frame)
-```
-```{r, message=FALSE}
-summary(final.model)
-
-plot(final.model)
-```
-```{r, message=FALSE}
-cooks <- cooks.distance(reduced.model)
-plot(reduced.model, which = 4)
-
-# All diagonistic plots
-par(mfrow = c(2, 2))
-plot(reduced.model, which = c(1, 2, 3, 4))
-```
-
-```{r, message=FALSE}
-cooks <- cooks.distance(final.model)
-plot(final.model, which = 4)
-
-# All diagonistic plots
-par(mfrow = c(2, 2))
-plot(final.model, which = c(1, 2, 3, 4))
 ```
