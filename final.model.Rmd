@@ -1,0 +1,426 @@
+---
+title: "Final Model"
+author: "Edward J. Lee"
+date: "2025-04-05"
+output: pdf_document
+---
+## Usual Data Cleaning
+```{r, message=FALSE}
+library(NHANES)  # NHANES dataset
+library(dplyr)   # Data wrangling
+library(ggplot2) # Visualization
+library(car)     # Multicollinearity check (VIF)
+library(ggResidpanel) # Advanced diagnostic plots
+library(knitr) #for kable
+library(gridExtra) #for scatterplot matrix
+
+options(scipen = 999)
+
+# if you don't have it installed, do install_packages("NHANES")
+data("NHANES")
+nrow(NHANES) #10,000 observations
+
+# remove babies (ages 0-3)
+nhanes_filtered <- NHANES %>% filter(Age > 20,
+                                     Height > 0,
+                                     Weight > 0,
+                                     BPDia1 > 10,
+                                     BPDia2 > 10,
+                                     BPDia3 > 10,
+                                     BPDiaAve > 10,
+                                     BPSys1 > 10,
+                                     BPSys2 > 10,
+                                     BPSys3 > 10,
+                                     BPSysAve > 10,
+                                     TotChol > 0)
+
+nrow(nhanes_filtered) #7094 observations
+
+# remove NA entries and only select columns of interest
+nhanes_data <- nhanes_filtered %>% 
+  dplyr::select(Height, Age, Weight, BPSysAve, BPDiaAve,
+                TotChol, SmokeNow, PhysActiveDays) %>%
+  na.omit() 
+  
+
+# categorical predictors
+nhanes_data$SmokeNow <- as.factor(nhanes_data$SmokeNow)
+nhanes_data <- data.frame(nhanes_data)
+
+# fit the model
+model <- lm(TotChol ~ Age + Weight + Height + BPSysAve + BPDiaAve + SmokeNow +
+              PhysActiveDays, 
+            data = nhanes_data)
+
+n <- nrow(nhanes_data)
+```
+
+## Box-Cox Transformation and Polynomial Term
+```{r, message=FALSE}
+#POLYNOMIAL "AGE" TERM
+pb_data <- nhanes_data %>% 
+  dplyr::select(Height, Age, Weight, BPSysAve, BPDiaAve,
+                TotChol, SmokeNow, PhysActiveDays) %>% 
+  mutate(pb.Age2 = Age^2) 
+
+pb_model <- lm(TotChol~Age+pb.Age2+Height+Weight+BPSysAve+BPDiaAve+
+                 SmokeNow+PhysActiveDays, data=pb_data)
+
+#BOX COX TRANSFORMATION
+library(MASS)
+
+pb.b <- boxcox(pb_model)
+
+pb.lambda <- pb.b$x[which.max(pb.b$y)]
+
+pb.log_product <- sum(log(pb_data$TotChol))
+pb.geo_mean <- exp(pb.log_product/n)
+
+pb.TotChol <- pb.geo_mean^(1-pb.lambda)*(pb_data$TotChol^pb.lambda - 1)/pb.lambda
+
+
+p.BXCX.frame <- pb_data %>% 
+  dplyr::select(-TotChol) %>% 
+  mutate(pb.TotChol = pb.TotChol)
+
+p.BXCX.model <- lm(pb.TotChol ~ Age + pb.Age2 + Weight + Height + BPSysAve + 
+                          BPDiaAve + SmokeNow + PhysActiveDays,
+                        data = p.BXCX.frame)
+
+summary(p.BXCX.model)
+```
+
+```{r, message=FALSE}
+#FITTED AND RESIDUAL VALUES FROM TRANSFORMED
+pb.fitted <- fitted(p.BXCX.model)
+pb.residuals <- resid(p.BXCX.model)
+
+#DATA FRAME FOR PLOTTING
+pb.plot_data <- data.frame(pb.fitted = pb.fitted, pb.residuals = pb.residuals)
+
+#PAIRWISE PLOTS OF ORIGINAL MODEL
+pairs(~pb.TotChol+Age+pb.Age2+Weight+Height+
+        BPSysAve+BPDiaAve+SmokeNow+PhysActiveDays,
+      data = p.BXCX.frame, 
+      main = "Pairwise ScatterPlots of Transformed Polynomial Model",
+      col = "blue")
+```
+
+## Residual Plots
+```{r, message=FALSE}
+#RESIDUALS VS FITTED
+res_fitted_plot <- ggplot(data = pb.plot_data,
+                          aes(x = pb.fitted, y = pb.residuals)) +
+  geom_point(color = "blue", alpha = 0.5) +
+  geom_hline(yintercept = 0, color = "red") +
+  labs(title = "Residuals vs Fitted Values (BXCX and Poly)", 
+       x = "Fitted Values", y = "Residuals")
+
+print(res_fitted_plot)
+```
+\newpage
+```{r, message=FALSE}
+#NORMAL QQ PLOT
+qq_plot <- ggplot(data = data.frame(pb.residuals = pb.residuals),
+                  aes(sample = pb.residuals)) +
+  stat_qq() +
+  stat_qq_line(color = "red") +
+  labs(title = "Normal Q-Q Plot (BXCX and Poly)",
+       x = "Theoretical Quantiles", y = "Sample Quantiles")
+
+print(qq_plot)
+```
+
+```{r, message=FALSE}
+#RESIDUALS VS AGE
+res_age_plot <- ggplot(p.BXCX.frame,
+                       aes(x = Age, y = pb.residuals)) +
+  geom_point(color = "blue", alpha = 0.5) +
+  geom_hline(yintercept = 0, color = "red") +
+  labs(title = "Residuals vs Age (BXCX and Poly)",
+       x = "Age", y = "Residuals")
+
+print(res_age_plot)
+```
+
+```{r, message=FALSE}
+#RESIDUALS VS WEIGHT
+res_weight_plot <- ggplot(p.BXCX.frame,
+                          aes(x = Weight, y = pb.residuals)) +
+  geom_point(color = "blue", alpha = 0.5) +
+  geom_hline(yintercept = 0, color = "red") +
+  labs(title = "Residuals vs Weight (BXCX and Poly)",
+       x = "Weight", y = "Residuals")
+
+print(res_weight_plot)
+```
+
+```{r, message=FALSE}
+#RESIDUALS VS HEIGHT
+res_height_plot <- ggplot(p.BXCX.frame,
+                          aes(x = Height, y = pb.residuals)) +
+  geom_point(color = "blue", alpha = 0.5) +
+  geom_hline(yintercept = 0, color = "red") +
+  labs(title = "Residuals vs Height (BXCX and Poly)",
+       x = "Height", y = "Residuals")
+
+print(res_height_plot)
+```
+
+```{r, message=FALSE}
+#RESIDUALS VS BPSysAve
+res_BPSysAve_plot <- ggplot(p.BXCX.frame,
+                            aes(x = BPSysAve, y = pb.residuals)) +
+  geom_point(color = "blue", alpha = 0.5) +
+  geom_hline(yintercept = 0, color = "red") +
+  labs(title = "Residuals vs BPSysAve (BXCX and Poly)",
+       x = "Average Systolic Blood Pressure", y = "Residuals")
+
+print(res_BPSysAve_plot)
+```
+
+```{r, message=FALSE}
+#RESIDUALS VS BPDiaAve
+res_BPDiaAve_plot <- ggplot(p.BXCX.frame,
+                            aes(x = BPDiaAve, y = pb.residuals)) +
+  geom_point(color = "blue", alpha = 0.5) +
+  geom_hline(yintercept = 0, color = "red") +
+  labs(title = "Residuals vs BPDiasAve (BXCX and Poly)",
+       x = "Average Diastolic Blood Pressure", y = "Residuals")
+
+print(res_BPDiaAve_plot)
+```
+
+```{r, message=FALSE}
+#RESIDUALS VS SmokeNow (BOXPLOT)
+res_smoke_plot <- ggplot(
+  p.BXCX.frame, aes(x = as.factor(SmokeNow), y = pb.residuals)) +
+  geom_boxplot(fill = "lightblue", color = "darkblue", alpha = 0.7) +
+  geom_hline(yintercept = 0, color = "red", linetype = "dashed") +
+  theme_minimal() +
+  ggtitle("Residuals vs Current Smoker (BXCX and Poly)") +
+  xlab("Currently Smokes") +
+  ylab("Residuals") +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1, size = 8))
+
+print(res_smoke_plot)
+```
+
+```{r, message=FALSE}
+#RESIDUALS VS PhysActiveDays (BOXPLOT)
+res_active_plot <- ggplot(
+  p.BXCX.frame,
+  aes(x = as.factor(PhysActiveDays), y = pb.residuals)) +
+  geom_boxplot(fill = "lightblue", color = "darkblue", alpha = 0.7) +
+  geom_hline(yintercept = 0, color = "red", linetype = "dashed") +
+  theme_minimal() +
+  ggtitle("Residuals vs Physically Active Days") +
+  xlab("Days in a Week of Physical Activity") +
+  ylab("Residuals") +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1, size = 8))
+
+print(res_active_plot)
+```
+
+
+
+```{r, message=FALSE}
+tr_stres_values <- rstandard(p.BXCX.model)
+
+tr_stres_plot <- hist(tr_stres_values,
+                          xlab = "Standardized Residuals",
+                          main = "Standardized Residual Histogram")
+
+```
+```{r, message=FALSE}
+leverage <- hatvalues(p.BXCX.model)
+
+
+##LEVERAGE POINTS
+p <- 8
+high_lev <- 2*(p+1)/n
+
+leverage_points <- p.BXCX.frame[leverage > high_lev,]
+leverage_points <- leverage_points %>% 
+  mutate(row = row.names(leverage_points))
+
+
+#FINDING OUTLIERS
+st.residuals <- rstandard(p.BXCX.model) 
+
+outlier_points <- p.BXCX.frame[abs(st.residuals) > 4,]
+
+#COOKS DISTANCE
+cooks_value <- cooks.distance(p.BXCX.model)
+
+f_value <- qf(0.50, 8, 1280)
+
+cooks_points <- p.BXCX.frame[cooks_value > f_value,]
+
+#DFFITS
+dffits_cutoff <- 2*(sqrt((p+1)/n))
+
+dffits_value = dffits(p.BXCX.model)
+
+dffits_points <- p.BXCX.frame[(abs(dffits_value) > dffits_cutoff),]
+dffits_points <- dffits_points %>% 
+  mutate(row = row.names(dffits_points))
+
+#DFBETAS
+dfbetas_cutoff <- 2/sqrt(n)
+
+dfbeta_frame <- as.data.frame(dfbetas(p.BXCX.model)) 
+
+dfbeta_points <- round(dfbeta_frame[apply(
+  abs(dfbeta_frame)>dfbetas_cutoff,1,any),],4)
+dfbeta_points <- dfbeta_points %>% 
+  mutate(row = row.names(dfbeta_points))
+
+#Problematic observations
+influential_points <- c(728,823)
+p.BXCX.frame[influential_points, ]
+
+clean.frame <- p.BXCX.frame %>%
+dplyr::filter(!row_number() %in% influential_points)
+
+clean_model <- lm(pb.TotChol ~ Age + pb.Age2 + Weight + Height + BPSysAve + 
+    BPDiaAve + SmokeNow + PhysActiveDays, data = clean.frame)
+
+summary(clean_model)
+
+plots <- plot(p.BXCX.model)
+```
+
+```{r, message=FALSE}
+library(leaps)
+
+best_subset <- regsubsets(pb.TotChol~., data=clean.frame,nvmax=8,                  nbest=1,really.big=TRUE,method="exhaustive")
+
+summary(best_subset)
+
+plot(best_subset,scale='adjr2')
+plot(best_subset,scale='bic');
+plot(best_subset,scale='Cp')
+```
+
+```{r, message=FALSE}
+AIC <- step(clean_model, direction="both")
+
+summary(AIC)
+
+final_model <- lm(pb.TotChol ~ Age+pb.Age2+Height+BPSysAve+BPDiaAve,
+                    data=clean.frame)
+```
+
+```{r, message=FALSE}
+#PREDICTION ACCURACY
+set.seed(123)
+train_index <- sample(1:nrow(clean.frame), 0.7 * nrow(clean.frame))
+train_data <- clean.frame[train_index, ]
+test_data <- clean.frame[-train_index, ]
+
+validation_model <- lm(pb.TotChol ~ Age + pb.Age2 + Height + BPSysAve + BPDiaAve,
+                        data = train_data)
+predictions <- predict(validation_model, newdata = test_data)
+
+# Compare predictions to actual
+mean((predictions - test_data$pb.TotChol)^2)  # MSE
+sqrt(mean((predictions - test_data$pb.TotChol)^2))  # RMSE
+
+
+
+```
+```{r, message=FALSE}
+#K-Fold (10-Fold) MODEL VALIDATION
+library(caret)
+
+#FINAL_MODEL VALIDATION
+train_control <- trainControl(method = "cv", number = 10)
+cv_model <- train(
+  pb.TotChol ~ Age+pb.Age2+Height+BPSysAve+BPDiaAve,
+  data = clean.frame,
+  method = "lm",
+  trControl = train_control
+)
+
+print(cv_model)
+```
+```{r, message=FALSE}
+#FINAL_MODEL VALIDATION
+train_control_full <- trainControl(method = "cv", number = 10)
+cv_full_model <- train(
+  pb.TotChol ~ .,
+  data = clean.frame,
+  method = "lm",
+  trControl = train_control_full
+)
+
+print(cv_full_model)
+```
+```{r, message=FALSE}
+#NULL_MODEL VALIDATION
+
+train_control_null <- trainControl(method = "cv", number = 10)
+
+
+cv_null_model <- train(
+  pb.TotChol ~ SmokeNow,
+  data = clean.frame,
+  method = "lm",
+  trControl = train_control_null
+)
+
+print(cv_null_model)
+```
+```{r,message=FALSE}
+#ORIGINAL MODEL VALIDATION
+train_original <- trainControl(method = "cv", number = 10)
+cv_original_model <- train(
+  TotChol ~ Age+Height+BPSysAve+BPDiaAve,
+  data = nhanes_data,
+  method = "lm",
+  trControl = train_original
+)
+
+print(cv_original_model)
+```
+```{r,message=FALSE}
+#ORIGINAL FULL MODEL VALIDATION
+train_full.og <- trainControl(method = "cv", number = 10)
+cv_full.og_model <- train(
+  TotChol ~ .,
+  data = nhanes_data,
+  method = "lm",
+  trControl = train_full.og
+)
+
+print(cv_full.og_model)
+```
+
+```{r,message=FALSE}
+library(glmnet)
+
+lasso_model <- train(
+  pb.TotChol ~ Age+pb.Age2+Height+BPSysAve+BPDiaAve, 
+  data = clean.frame,
+  method = "glmnet",
+  trControl = train_control,
+  tuneGrid = expand.grid(
+    alpha = 1,         # Lasso
+    lambda = 10^seq(-4, 1, length = 100)  # Lambda grid
+  )
+)
+
+print(lasso_model)
+```
+
+```{r,message=FALSE}
+# Best lambda from caret model
+best_lambda <- cv_model$bestTune$lambda
+
+# Extract coefficients at that lambda
+lasso_coefs <- round(coef(cv_model$finalModel, s = best_lambda),4)
+
+# Convert to tidy format
+as.matrix(lasso_coefs)
+```
