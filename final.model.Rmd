@@ -1,11 +1,10 @@
 ---
-title: "Mulitple Linear Regression Modelling of TotChol from NHANES Data"
-author: "Edward J. Lee"
+title: "Examining Predictors of HDL Cholestrol using NHANES Data"
+author: "Edward J. Lee, Yusuf Emre, Vincent Mazz"
 date: "2025-04-05"
 output: pdf_document
 ---
-##Data Cleaning and Preliminary model
-```{r, message=FALSE}
+```{r, echo=FALSE, message=FALSE, include=FALSE}
 library(NHANES)  # NHANES dataset
 library(dplyr)   # Data wrangling
 library(ggplot2) # Visualization
@@ -53,9 +52,129 @@ summary(model)
 #Multicollinearity Check
 vif(model) #No serious multicollinarity, all <5
 ```
+## Introduction
 
-## Box-Cox Transformation and Polynomial Term
-```{r, message=FALSE}
+Cardiovascular disease remains a leading cause of death worldwide, with elevated cholesterol levels serving as an important and preventable risk factor. As prevention becomes a cornerstone of public health policy, understanding what drives changes in cholesterol is of the most importance.
+
+This study investigates which factors significantly influence total cholesterol levels in the adult population, using data from the National Health and Nutrition Examination Survey (NHANES). Specifically, it examines the role of age, weight, height, blood pressure, smoking habits, and physical activity as potential predictors.
+
+Previous research provides a useful foundation. For example, Ferrara et al. (1997) found that cholesterol levels tend to decline in older adults. However, this study observed a weak but significant positive association between age and cholesterol, suggesting that additional lifestyle or metabolic factors may be at play. Next, Henriksson et al. (2001) reported a negative correlation between BMI and HDL cholesterol. Although BMI was not included directly in this model, height and weight were analyzed independently. The findings showed that weight alone lacked a strong relationship with cholesterol, partially contradicting earlier work. Finally, Kim et al. (2011) linked high blood pressure with poorer lipid profiles—a pattern repeated here, as both systolic and diastolic blood pressure were positively associated with cholesterol levels.
+
+However, there remains inconsistency in how these predictors interact across populations and within multifactorial health profiles. This study addresses this gap by assessing the influence of each factor using multivariable regression.
+
+Linear regression was chosen for its ability to estimate the relationship between a continuous outcome—total cholesterol—and multiple predictors. Diagnostic checks were used to evaluate key assumptions, including linearity, homoscedasticity, and normality of residuals. While some violations were observed (e.g., non-normal residuals and heteroscedasticity), potential remedies such as Box-Cox transformations were explored. Despite these limitations, linear regression remains a strong baseline method for identifying statistically significant predictors of cholesterol.
+
+By applying regression analysis to nationally representative NHANES data, this study provides data-driven insights into the factors most strongly associated with cholesterol levels—insights that can help shape future public health strategies.
+
+## Data Description
+
+## Prelminary Model Diagnostics
+```{r,  echo=FALSE, message=FALSE, include=FALSE}
+#FITTED AND RESIDUAL VALUES OF PRELIMINARY MODEL
+pre_fitted <- fitted(model)
+pre_residuals <- resid(model)
+
+#DATA FRAME FOR PLOTTING
+pre_plot_data <- data.frame(pre_fitted = pre_fitted,
+                            pre_residuals = pre_residuals)
+
+#PAIRWISE PLOTS OF ORIGINAL MODEL
+pre_pairwise_plot <- pairs(nhanes_data[, c("TotChol", "Age", "Weight", "Height", 
+                      "BPSysAve", "BPDiaAve", "SmokeNow", "PhysActiveDays")],
+      main = "Pairwise ScatterPlots of Preliminary Model",
+      col = "blue")
+
+#RESIDUALS VS FITTED
+pre_res_fitted_plot <- ggplot(data = pre_plot_data,
+                          aes(x = pre_fitted, y = pre_residuals)) +
+  geom_point(color = "blue", alpha = 0.5) +
+  geom_hline(yintercept = 0, color = "red") +
+  labs(title = "Residuals vs Fitted Values of Preliminary Model", 
+       x = "Fitted Values", y = "Residuals")
+
+#NORMAL QQ PLOT
+pre_qq_plot <- ggplot(data = data.frame(pre_residuals = pre_residuals),
+                  aes(sample = pre_residuals)) +
+  stat_qq() +
+  stat_qq_line(color = "red") +
+  labs(title = "Normal Q-Q Plot of Preliminary Model",
+       x = "Theoretical Quantiles", y = "Sample Quantiles")
+
+pre_stres_values <- rstandard(model)
+
+pre_stres_plot <- hist(
+  pre_stres_values,
+  xlab = "Standardized Residuals",
+  main = "Standardized Residual Histogram of Preliminary Model")
+
+#RESIDUALS VS AGE
+pre_res_age_plot <- ggplot(nhanes_data,
+                       aes(x = Age, y = pre_residuals)) +
+  geom_point(color = "blue", alpha = 0.5) +
+  geom_hline(yintercept = 0, color = "red") +
+  labs(title = "Residuals vs Age of Preliminary Model",
+       x = "Age", y = "Residuals")
+
+#RESIDUALS VS WEIGHT
+pre_res_weight_plot <- ggplot(nhanes_data,
+                          aes(x = Weight, y = pre_residuals)) +
+  geom_point(color = "blue", alpha = 0.5) +
+  geom_hline(yintercept = 0, color = "red") +
+  labs(title = "Residuals vs Weight of Preliminary Model",
+       x = "Weight", y = "Residuals")
+
+#RESIDUALS VS HEIGHT
+pre_res_height_plot <- ggplot(nhanes_data,
+                          aes(x = Height, y = pre_residuals)) +
+  geom_point(color = "blue", alpha = 0.5) +
+  geom_hline(yintercept = 0, color = "red") +
+  labs(title = "Residuals vs Height of Preliminary Model",
+       x = "Height", y = "Residuals")
+
+#RESIDUALS VS BPSysAve
+pre_res_BPSysAve_plot <- ggplot(nhanes_data,
+                            aes(x = BPSysAve, y = pre_residuals)) +
+  geom_point(color = "blue", alpha = 0.5) +
+  geom_hline(yintercept = 0, color = "red") +
+  labs(title = "Residuals vs BPSysAve of Preliminary Model",
+       x = "Average Systolic Blood Pressure", y = "Residuals")
+
+#RESIDUALS VS BPDiaAve
+pre_res_BPDiaAve_plot <- ggplot(nhanes_data,
+                            aes(x = BPDiaAve, y = pre_residuals)) +
+  geom_point(color = "blue", alpha = 0.5) +
+  geom_hline(yintercept = 0, color = "red") +
+  labs(title = "Residuals vs BPDiasAve of Preliminary Model",
+       x = "Average Diastolic Blood Pressure", y = "Residuals")
+
+#RESIDUALS VS SmokeNow (BOXPLOT)
+pre_res_smoke_plot <- ggplot(
+  nhanes_data, aes(x = as.factor(SmokeNow), y = pre_residuals)) +
+  geom_boxplot(fill = "lightblue", color = "darkblue", alpha = 0.7) +
+  geom_hline(yintercept = 0, color = "red", linetype = "dashed") +
+  theme_minimal() +
+  ggtitle("Residuals vs Current Smoker of Preliminary Model") +
+  xlab("Currently Smokes") +
+  ylab("Residuals") +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1, size = 8))
+
+#RESIDUALS VS PhysActiveDays (BOXPLOT)
+pre_res_active_plot <- ggplot(
+  nhanes_data,
+  aes(x = as.factor(PhysActiveDays), y = pre_residuals)) +
+  geom_boxplot(fill = "lightblue", color = "darkblue", alpha = 0.7) +
+  geom_hline(yintercept = 0, color = "red", linetype = "dashed") +
+  theme_minimal() +
+  ggtitle("Residuals vs Physically Active Days of Preliminary Model") +
+  xlab("Days in a Week of Physical Activity") +
+  ylab("Residuals") +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1, size = 8))
+
+```
+
+## Model Selection
+Preliminary model diagnostics indicated the model would benefit from modifications to improve model fit based on the indications of violated linear regression assumptions. With the primary objective of a predictive model in mind, certain changes were implemented into the model. 
+```{r, echo=FALSE, message=FALSE, include=FALSE}
 #POLYNOMIAL "AGE" TERM
 poly_data <- nhanes_data %>% 
   dplyr::select(Height, Age, Weight, BPSysAve, BPDiaAve,
@@ -86,10 +205,10 @@ p.BXCX.model <- lm(pb.TotChol ~ Age + Age2 + Weight + Height + BPSysAve +
                           BPDiaAve + SmokeNow + PhysActiveDays,
                         data = p.BXCX.frame)
 
-summary(p.BXCX.model)
-```
-##Transformed Poly Model Diagnostics
-```{r, message=FALSE}
+box_model <- lm(pb.TotChol ~ Age + Weight + Height + BPSysAve + 
+                          BPDiaAve + SmokeNow + PhysActiveDays,
+                        data = p.BXCX.frame)
+
 #FITTED AND RESIDUAL VALUES FROM TRANSFORMED
 fitted <- fitted(p.BXCX.model)
 residuals <- resid(p.BXCX.model)
@@ -97,115 +216,89 @@ residuals <- resid(p.BXCX.model)
 #DATA FRAME FOR PLOTTING
 plot_data <- data.frame(fitted = fitted, residuals = residuals)
 
-#PAIRWISE PLOTS OF ORIGINAL MODEL
-pairs(~pb.TotChol+Age+Age2+Weight+Height+
+#PAIRWISE PLOTS OF TRANSFORMED MODEL
+pairwise_plot <- pairs(~pb.TotChol+Age+Age2+Weight+Height+
         BPSysAve+BPDiaAve+SmokeNow+PhysActiveDays,
       data = p.BXCX.frame, 
       main = "Pairwise ScatterPlots of Transformed Polynomial Model",
       col = "blue")
-```
 
-## Residual Plots
-```{r, message=FALSE}
 #RESIDUALS VS FITTED
 res_fitted_plot <- ggplot(data = plot_data,
                           aes(x = fitted, y = residuals)) +
   geom_point(color = "blue", alpha = 0.5) +
   geom_hline(yintercept = 0, color = "red") +
-  labs(title = "Residuals vs Fitted Values (BXCX and Poly)", 
-       x = "Fitted Values", y = "Residuals")
+  labs(title = "Residuals vs Fitted Values of Transformed Model", 
+       x = "Fitted Values", y = "Residuals") +
+  theme(plot.title = element_text(size = 7), aspect.ratio = 1)
 
-print(res_fitted_plot)
-```
-\newpage
-```{r, message=FALSE}
 #NORMAL QQ PLOT
 qq_plot <- ggplot(data = data.frame(residuals = residuals),
                   aes(sample = residuals)) +
   stat_qq() +
   stat_qq_line(color = "red") +
-  labs(title = "Normal Q-Q Plot (BXCX and Poly)",
-       x = "Theoretical Quantiles", y = "Sample Quantiles")
+  labs(title = "Normal Q-Q Plot of Transformed Model",
+       x = "Theoretical Quantiles", y = "Sample Quantiles") +
+  theme(plot.title = element_text(size = 7),  aspect.ratio = 1)
 
-print(qq_plot)
-```
+tr_stres_values <- rstandard(p.BXCX.model)
 
-```{r, message=FALSE}
+tr_stres_plot <- hist(
+  tr_stres_values,
+  xlab = "Standardized Residuals",
+  main = "Standardized Residual Histogram of Transformed Model")
+
 #RESIDUALS VS AGE
 res_age_plot <- ggplot(p.BXCX.frame,
                        aes(x = Age, y = residuals)) +
   geom_point(color = "blue", alpha = 0.5) +
   geom_hline(yintercept = 0, color = "red") +
-  labs(title = "Residuals vs Age (BXCX and Poly)",
+  labs(title = "Residuals vs Age of Transformed Model",
        x = "Age", y = "Residuals")
 
-print(res_age_plot)
-```
-
-```{r, message=FALSE}
 #RESIDUALS VS WEIGHT
 res_weight_plot <- ggplot(p.BXCX.frame,
                           aes(x = Weight, y = residuals)) +
   geom_point(color = "blue", alpha = 0.5) +
   geom_hline(yintercept = 0, color = "red") +
-  labs(title = "Residuals vs Weight (BXCX and Poly)",
+  labs(title = "Residuals vs Weight of Transformed Model",
        x = "Weight", y = "Residuals")
 
-print(res_weight_plot)
-```
-
-```{r, message=FALSE}
 #RESIDUALS VS HEIGHT
 res_height_plot <- ggplot(p.BXCX.frame,
                           aes(x = Height, y = residuals)) +
   geom_point(color = "blue", alpha = 0.5) +
   geom_hline(yintercept = 0, color = "red") +
-  labs(title = "Residuals vs Height (BXCX and Poly)",
+  labs(title = "Residuals vs Height of Transformed Model",
        x = "Height", y = "Residuals")
 
-print(res_height_plot)
-```
-
-```{r, message=FALSE}
 #RESIDUALS VS BPSysAve
 res_BPSysAve_plot <- ggplot(p.BXCX.frame,
                             aes(x = BPSysAve, y = residuals)) +
   geom_point(color = "blue", alpha = 0.5) +
   geom_hline(yintercept = 0, color = "red") +
-  labs(title = "Residuals vs BPSysAve (BXCX and Poly)",
+  labs(title = "Residuals vs BPSysAve of Transformed Model",
        x = "Average Systolic Blood Pressure", y = "Residuals")
 
-print(res_BPSysAve_plot)
-```
-
-```{r, message=FALSE}
 #RESIDUALS VS BPDiaAve
 res_BPDiaAve_plot <- ggplot(p.BXCX.frame,
                             aes(x = BPDiaAve, y = residuals)) +
   geom_point(color = "blue", alpha = 0.5) +
   geom_hline(yintercept = 0, color = "red") +
-  labs(title = "Residuals vs BPDiasAve (BXCX and Poly)",
+  labs(title = "Residuals vs BPDiasAve of Transformed Model",
        x = "Average Diastolic Blood Pressure", y = "Residuals")
 
-print(res_BPDiaAve_plot)
-```
-
-```{r, message=FALSE}
 #RESIDUALS VS SmokeNow (BOXPLOT)
 res_smoke_plot <- ggplot(
   p.BXCX.frame, aes(x = as.factor(SmokeNow), y = residuals)) +
   geom_boxplot(fill = "lightblue", color = "darkblue", alpha = 0.7) +
   geom_hline(yintercept = 0, color = "red", linetype = "dashed") +
   theme_minimal() +
-  ggtitle("Residuals vs Current Smoker (BXCX and Poly)") +
+  ggtitle("Residuals vs Current Smoker of Transformed Model") +
   xlab("Currently Smokes") +
   ylab("Residuals") +
   theme(axis.text.x = element_text(angle = 45, hjust = 1, size = 8))
 
-print(res_smoke_plot)
-```
-
-```{r, message=FALSE}
 #RESIDUALS VS PhysActiveDays (BOXPLOT)
 res_active_plot <- ggplot(
   p.BXCX.frame,
@@ -213,26 +306,44 @@ res_active_plot <- ggplot(
   geom_boxplot(fill = "lightblue", color = "darkblue", alpha = 0.7) +
   geom_hline(yintercept = 0, color = "red", linetype = "dashed") +
   theme_minimal() +
-  ggtitle("Residuals vs Physically Active Days") +
+  ggtitle("Residuals vs Physically Active Days of Transformed Model") +
   xlab("Days in a Week of Physical Activity") +
   ylab("Residuals") +
   theme(axis.text.x = element_text(angle = 45, hjust = 1, size = 8))
+```
+A distinct convex curvilinear relationship is evident in Figure Scatterplot Matrix and Figure Residuals vs Age, indicative of a severe violation in linearity. The additional polynomial term *Age2*, the square of the *Age* variable vector, was included to capture this non-linear relationship between the *Age* predictor and dependent variable *TotChol*.  
+Following this change, the Box-Cox transformation was applied to the dependent variable *TotChol*. This transformation aims to address violations in normality and homoscedasticity as indicated by the right-tailed skew seen in Figure QQ Plot, and fanning patterns of residuals shown by Figure Residuals vs Fitted. Maximum likelihood was used to derive a lambda value ($\lambda$ = 0.1414) for the transformation by using functions from the R package *MASS* (Venables & Ripley, 2002) and default built-in algebraic operators. This transformation was not applied to the predictor variables to preserve interpretability.
 
-print(res_active_plot)
+Remarkable improvements in model assumptions were noticed in the diagnostic plots of the transformed model, such as residual plots showing approximately null relationships with residuals more evenly and widely dispersed across the fitted values. Figure QQ Plot Transformed also now shows the effectiveness of the Box-Cox transformation with its resulting nearly perfect normal distribution in the residuals. 
+
+```{r, echo=FALSE,fig.cap="QQ-Plot and Residuals vs Fitted Plot of Transformed Model.", out.width="100%"}
+grid.arrange(qq_plot, res_fitted_plot, ncol = 2)
 ```
 
+Metrics of model fit in the transformed model ($R^2=0.1264$, $adjR^2=0.121)$ also showed a large increase when compared to the preliminary model ($R^2=0.07025$, $adjR^2 =0.06553$). Despite the polynomial untransformed model yileding higher fit, severe violations in normality motivated the use of the Box-Cox cocurrently. These metrics compared to other iterations of model transformations can be found in Table of Models.
+```{r, echo=FALSE, out.width="100%"}
+pre_cleaning_models <- list(model, poly_model, box_model, p.BXCX.model)
+pre_model_names <- c("Preliminary", "Polynomial", 
+                 "Box-Cox", "Poly and Box-Cox")
 
+pre_model_stats <- lapply(pre_cleaning_models, function(m) {
+  s <- summary(m)
+  fstat <- s$fstatistic
+  f_value <- unname(fstat[1])
+  data.frame(
+    R2 = round(s$r.squared, 3),
+    Adj_R2 = round(s$adj.r.squared, 3),
+    F_value = round(f_value, 2)
+  )
+})
 
-```{r, message=FALSE}
-tr_stres_values <- rstandard(p.BXCX.model)
+results_table <- do.call(rbind, pre_model_stats)
+results_table <- cbind(Model = pre_model_names, results_table)
 
-tr_stres_plot <- hist(tr_stres_values,
-                          xlab = "Standardized Residuals",
-                          main = "Standardized Residual Histogram")
-
+knitr::kable(results_table, caption = "Comparison of Linear Regression Models")
 ```
-## Problematic Observations
-```{r, message=FALSE}
+Upon fitting the transformed model, the dataset was screened for problematic observations. Initial data cleaning ensured the dataset excludes null entries and obvious misinputs, thus the criteria for removing problematic observations was only a matter of measures of influence. 
+```{r,echo=FALSE,message=FALSE, include=FALSE}
 ##LEVERAGE POINTS
 leverage <- hatvalues(p.BXCX.model)
 
@@ -246,14 +357,15 @@ leverage_points <- leverage_points %>%
 #FINDING OUTLIERS
 st.residuals <- rstandard(p.BXCX.model) 
 
-outlier_points <- p.BXCX.frame[abs(st.residuals) > 4,]
+outlier_points <- p.BXCX.frame[abs(st.residuals) > 4,] #968
+
+#Same result below
+outlierTest(p.BXCX.model)
 
 #COOKS DISTANCE
 cooks_value <- cooks.distance(p.BXCX.model)
 
-f_value <- qf(0.50, 8, 1280)
-
-cooks_points <- p.BXCX.frame[cooks_value > f_value,]
+cooks_points <- p.BXCX.frame[cooks_value > 4/n,]
 
 #DFFITS
 dffits_cutoff <- 2*(sqrt((p+1)/n))
@@ -274,6 +386,8 @@ dfbeta_points <- round(dfbeta_frame[apply(
 dfbeta_points <- dfbeta_points %>% 
   mutate(row = row.names(dfbeta_points))
 
+influential_plot <- influenceIndexPlot(p.BXCX.model)
+
 #Problematic observations
 influential_points <- c(728,823)
 p.BXCX.frame[influential_points, ]
@@ -285,11 +399,41 @@ clean_model <- lm(pb.TotChol ~ Age + Age2 + Weight + Height + BPSysAve +
     BPDiaAve + SmokeNow + PhysActiveDays, data = clean.frame)
 
 summary(clean_model)
-
-plots <- plot(clean_model)
 ```
+Outliers were identified by checking standardized residuals, and influential observations were identified based on their measurements of leverage, Cook’s Distance, Difference in Fits (DFFITS) and Differences in Beta Coefficients (DFBETAS). If an observation had any of these measures surpass their respective thresholds and were concurrently highlighted by the *influenceIndexPlot()* function from the R package *car* (Fox & Weisberg, 2019) they were flagged as problematic observations. 
+
+Based on this criteria, five potentially problematic observations were identified, of which only two were removed from the data set. A summary of these observations and their measures of leverage are presented below.
+```{r, echo=FALSE, out.width="100%"}
+problem_obs <- c(10, 968, 724, 823, 728)
+
+problem_obs_table <- data.frame(
+  Std_Residual = round(st.residuals[problem_obs], 3),
+  Cooks_Distance = round(cooks_value[problem_obs], 5),
+  Leverage = round(leverage[problem_obs], 5),
+  DFFITS = round(dffits_value[problem_obs], 4)
+)
+
+colnames(problem_obs_table) <- c("St. Residual", "Cook's Distance", 
+                                 "Leverage", "DFFITS")
+
+knitr::kable(problem_obs_table, caption = "Measures of Influence of Potentially Problematic Observations")
+```
+For each potentially problematic observation, the transformed model was fitted using the same dataset but with the exclusion of the observation under inspection. Models were then compared to determine which observations to remove for highest model fit. By this process, the exclusion of both observations 824 and 728 was found to induce the highest model fit ($R^2=0.129$, $adjR^2=0.1236$). The exclusion of any of the remaining problematic observations would decrease model fit (see Table of Models), and thus with the motivation of a predictive model with high fit, the observations were retained in the dataset.
+
+Several methods of variable selection were employed, such as full and partial F-tests, t-tests for individual predictors, and stepwise regression for AIC and BIC. All of these methods unanimously arrived at the same conclusion of finding the predictors *Age, Age2, Height, BPSysAve* and *BPDiaAve* to be statistically significant.  
+
 ## Variable Selection
-```{r, message=FALSE}
+```{r,echo=FALSE,message=FALSE}
+#Partial F-Test
+partial_F <- Anova(clean_model, type = 3)
+
+#Overall F-test given in summary(clean_model)
+#F-statistic: 23.66 on 8 and 1278 DF,  p-value: < 0.00000000000000022
+
+#t-tests also given in summary(clean_model)
+```
+
+```{r,echo=FALSE,message=FALSE}
 library(leaps)
 
 best_subset <- regsubsets(pb.TotChol~., data=clean.frame,nvmax=8,                  nbest=1,really.big=TRUE,method="exhaustive")
@@ -301,13 +445,13 @@ plot(best_subset,scale='bic');
 plot(best_subset,scale='Cp')
 ```
 
-```{r, message=FALSE}
+```{r,echo=FALSE,message=FALSE}
 AIC <- step(clean_model, direction="both")
 
 summary(AIC)
 ```
 ## FINAL MODEL
-```{r, message=FALSE}
+```{r,echo=FALSE,message=FALSE}
 final_model <- lm(pb.TotChol ~ Age+Age2+Height+BPSysAve+BPDiaAve,
                     data=clean.frame)
 
@@ -316,7 +460,7 @@ confint(final_model)
 ```
 
 ## Prediction Accuracy and Model Validation
-```{r, message=FALSE}
+```{r,echo=FALSE,message=FALSE}
 #PREDICTION ACCURACY
 set.seed(123)
 train_index <- sample(1:nrow(clean.frame), 0.7 * nrow(clean.frame))
@@ -331,7 +475,7 @@ predictions <- predict(validation_model, newdata = test_data)
 mean((predictions - test_data$pb.TotChol)^2)  # MSE
 sqrt(mean((predictions - test_data$pb.TotChol)^2))  # RMSE
 ```
-```{r, message=FALSE}
+```{r,echo=FALSE,message=FALSE}
 #K-Fold (10-Fold) MODEL VALIDATION
 library(caret)
 
@@ -346,7 +490,7 @@ cv_model <- train(
 
 print(cv_model)
 ```
-```{r, message=FALSE}
+```{r,echo=FALSE,message=FALSE}
 #FULL_MODEL VALIDATION
 train_control_full <- trainControl(method = "cv", number = 10)
 cv_full_model <- train(
@@ -358,22 +502,22 @@ cv_full_model <- train(
 
 print(cv_full_model)
 ```
-```{r, message=FALSE}
+```{r, echo=FALSE, message=FALSE}
 #NULL_MODEL VALIDATION
 
 train_control_null <- trainControl(method = "cv", number = 10)
 
 
 cv_null_model <- train(
-  pb.TotChol ~ SmokeNow,
-  data = clean.frame,
+  x = data.frame(Intercept = rep(1, nrow(clean.frame))),
+  y = clean.frame$pb.TotChol,
   method = "lm",
   trControl = train_control_null
 )
 
 print(cv_null_model)
 ```
-```{r,message=FALSE}
+```{r,echo=FALSE,message=FALSE}
 #ORIGINAL MODEL VALIDATION
 train_original <- trainControl(method = "cv", number = 10)
 cv_original_model <- train(
@@ -385,7 +529,7 @@ cv_original_model <- train(
 
 print(cv_original_model)
 ```
-```{r,message=FALSE}
+```{r,echo=FALSE,message=FALSE}
 #ORIGINAL FULL MODEL VALIDATION
 train_full.og <- trainControl(method = "cv", number = 10)
 cv_full.og_model <- train(
@@ -398,7 +542,7 @@ cv_full.og_model <- train(
 print(cv_full.og_model)
 ```
 
-```{r,message=FALSE}
+```{r,echo=FALSE,message=FALSE}
 library(glmnet)
 
 lasso_model <- train(
@@ -415,7 +559,7 @@ lasso_model <- train(
 print(lasso_model)
 ```
 
-```{r,message=FALSE}
+```{r,echo=FALSE,message=FALSE}
 # Get the best lambda chosen by caret
 best_lambda <- lasso_model$bestTune$lambda
 
@@ -431,7 +575,7 @@ colnames(lasso_coefs_df)[1] <- "Coefficient"
 subset(lasso_coefs_df, Coefficient != 0)
 ```
 
-```{r,message=FALSE}
+```{r,echo=FALSE,message=FALSE}
 #LASSO MODEL VALIDATION
 train_lasso <- trainControl(method = "cv", number = 10)
 cv_lasso <- train(
