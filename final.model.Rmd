@@ -53,7 +53,6 @@ summary(model)
 vif(model) #No serious multicollinarity, all <5
 ```
 ## Introduction
-
 Cardiovascular disease remains a leading cause of death worldwide, with elevated cholesterol levels serving as an important and preventable risk factor. As prevention becomes a cornerstone of public health policy, understanding what drives changes in cholesterol is of the most importance.
 
 This study investigates which factors significantly influence total cholesterol levels in the adult population, using data from the National Health and Nutrition Examination Survey (NHANES). Specifically, it examines the role of age, weight, height, blood pressure, smoking habits, and physical activity as potential predictors.
@@ -67,6 +66,49 @@ Linear regression was chosen for its ability to estimate the relationship betwee
 By applying regression analysis to nationally representative NHANES data, this study provides data-driven insights into the factors most strongly associated with cholesterol levels—insights that can help shape future public health strategies.
 
 ## Data Description
+*NHANES* is a built-in data package from R containing survey data collected by the US National Center for Health Statistics (NCHS) from 2009-2011. The target population of the National Health and Nutrition Examination Surveys (NHANES) is the “the non-institutionalized civilian resident population of the United States”.  The sample population was obtained via a multistep sampling method, and intentionally oversamples certain minority groups to accurately weight their proportions. These efforts are made with the goal to assess and monitor the health and nutritional conditions of the US population via health checkups and interviews (Centers for Disease Control and Prevention, 2015). 
+
+Total high-density lipoprotein (HDL) cholesterol in mmol/L is a variable surveyed by NHANES, captured by the variable *TotChol* in the data package. The sample mean is 5.026 mmol/L and the median is 4.970 mmol/L based on 1289 observations. The nature of this variable being a continuous measurement which follows an approximately normal distribution allows it to be a suitable response variable for a linear regression model. Furthermore, the current literature has evidence that the predictor variables used in our model have an influence upon HDL levels. 
+
+```{r, include = TRUE, echo = FALSE}
+TotChol_table <- t(c(summary(nhanes_data$TotChol))) %>% 
+  kable(caption = "Summary Statistics of ***TotChol***",
+        format = "simple")
+
+TotChol_table
+```
+
+The following is a brief summary of these predictor variables and what current research knows about its relationship to the HDL cholesterol levels in humans.
+
+***Age***: Age of participant at time of screening in years. The approximately uniform distribution of this variable is indicative of good sampling design. Researchers find that HDL cholesterol levels tend to diminish with age, but there are many other factors that can contribute to this (Ferrera et al., 1997; Milman et al., 2014).   
+
+***Height*** and ***Weight***: The standing height of the participant in centimetres, and the weight of the participant in kilograms respectively. The measurements of height follow an approximately standard normal distribution, once again indicative of good sampling techniques.  
+
+Weight follows moderate right skew with its measures of central tendency gathering around 80kg (M = 81.16kg, Mdn = 78.8). Seeing as how close the mean and median are to each other and how consistent these statistics are to population parameters captured by the NCHS (Fryar et al., 2021), it is probable that the skew is caused by outliers. 
+
+Researchers have shown that Body Mass Index (BMI) scores are negatively associated with HCL cholesterol levels (Lamon-Fava et al., 1996). Note that BMI is a function of height and weight, which both have their respective associations with cholesterol levels (Henriksson et al, 2001).
+
+***BPSysAve*** and ***BPDiaAve***:  The systolic and diastolic blood pressure readings of participants in millimeters of mercury. Both follow approximately normal distributions, where BPSysAve (M = 121.69, Mdn = 119.0) has a right skew, and BPDiaAve (M = 70.38, Mdn = 71.0) has a slight left skew. Seeing as how the means and medians of these variables are very close to each other, these skews could be attributed to outliers or natural variation in the population. The current research shows evidence of healthier blood pressure readings in those with higher HDL cholesterol (Al-Jarallah, 2022; Kim et al., 2011, Lye et al., 2009).
+
+***SmokeNow***: 41.48% of participants (799 participants) have indicated that they currently smoke tobacco, with the remaining 57.52% of participants claiming they do not (590 participants). Several studies have shown evidence of negative associations with smoking and HDL cholesterol levels (Garrison et al., 1978; Nakamura et al., 2021).
+
+***DaysPhysActive***: The self-reported number of days per week a participant engages in moderate to high intensity physical activity. Most participants claim they generally engage in physical activity 3 times a week. The current research generally tends to agree that consistent physical exercise promotes higher levels of HDL cholesterol (Kodama et al., 1960).
+
+```{r, include = TRUE, echo = FALSE}
+summary_stats <- t((data.frame(Age = c(summary(nhanes_data$Age))) %>% 
+  mutate(Height = c(summary(nhanes_data$Height))) %>% 
+  mutate(Weight = c(summary(nhanes_data$Weight))) %>% 
+  mutate(BPSysAve = c(summary(nhanes_data$BPSysAve))) %>% 
+  mutate(BPDiaAve = c(summary(nhanes_data$BPDiaAve)))))
+  
+#standard <- data.frame("16.28", "9.43", "19.13", "18.05", "12.48")
+
+summary_table <- (summary_stats) %>% 
+  kable(caption = "Summary Statistics of Predictors",
+        format = "simple")
+
+knitr::kable(summary_stats, caption="Summary Statistics of Continuous Predictors")
+```
 
 ## Prelminary Model Diagnostics
 ```{r,  echo=FALSE, message=FALSE, include=FALSE}
@@ -320,7 +362,8 @@ Remarkable improvements in model assumptions were noticed in the diagnostic plot
 grid.arrange(qq_plot, res_fitted_plot, ncol = 2)
 ```
 
-Metrics of model fit in the transformed model ($R^2=0.1264$, $adjR^2=0.121)$ also showed a large increase when compared to the preliminary model ($R^2=0.07025$, $adjR^2 =0.06553$). Despite the polynomial untransformed model yileding higher fit, severe violations in normality motivated the use of the Box-Cox cocurrently. These metrics compared to other iterations of model transformations can be found in Table of Models.
+Metrics of model fit in the transformed model ($R^2=0.1264$, $adjR^2=0.121,)$ also showed a large increase when compared to the preliminary model ($R^2=0.08085$, $adjR^2 =0.07583$). Despite the polynomial untransformed model yielding higher fit, severe violations in normality motivated the use of the Box-Cox cocurrently. These metrics compared to other iterations of model transformations can be found in Table of Models.
+\newline
 ```{r, echo=FALSE, out.width="100%"}
 pre_cleaning_models <- list(model, poly_model, box_model, p.BXCX.model)
 pre_model_names <- c("Preliminary", "Polynomial", 
@@ -402,27 +445,36 @@ summary(clean_model)
 ```
 Outliers were identified by checking standardized residuals, and influential observations were identified based on their measurements of leverage, Cook’s Distance, Difference in Fits (DFFITS) and Differences in Beta Coefficients (DFBETAS). If an observation had any of these measures surpass their respective thresholds and were concurrently highlighted by the *influenceIndexPlot()* function from the R package *car* (Fox & Weisberg, 2019) they were flagged as problematic observations. 
 
-Based on this criteria, five potentially problematic observations were identified, of which only two were removed from the data set. A summary of these observations and their measures of leverage are presented below.
-```{r, echo=FALSE, out.width="100%"}
+Based on this criteria, five potentially problematic observations were identified, of which only observation 823 and 728 were removed from the data set. A summary of these observations and their measures of leverage are present in Table 2.
+```{r, echo=FALSE}
 problem_obs <- c(10, 968, 724, 823, 728)
 
+adj_r2_removed <- numeric(length(problem_obs))
+
+for (i in seq_along(problem_obs)) {
+  temp_data <- p.BXCX.frame[-problem_obs[i], ]
+  temp_model <- lm(pb.TotChol ~ Age + Age2 + Height + BPSysAve + BPDiaAve, 
+                   data = temp_data)
+  adj_r2_removed[i] <- summary(temp_model)$adj.r.squared
+}
+
 problem_obs_table <- data.frame(
-  Std_Residual = round(st.residuals[problem_obs], 3),
-  Cooks_Distance = round(cooks_value[problem_obs], 5),
+  `St. Residual` = round(st.residuals[problem_obs], 3),
+  `Cook's Distance` = round(cooks_value[problem_obs], 5),
   Leverage = round(leverage[problem_obs], 5),
-  DFFITS = round(dffits_value[problem_obs], 4)
+  DFFITS = round(dffits_value[problem_obs], 4),
+  `Adj. R2 (Removed)` = round(adj_r2_removed, 3)
 )
 
-colnames(problem_obs_table) <- c("St. Residual", "Cook's Distance", 
-                                 "Leverage", "DFFITS")
+colnames(problem_obs_table) <- c("St. Residual", "Cook's Distance",
+                                 "Leverage", "DFFITS", "Adj.R2 with Obs Removed")
 
-knitr::kable(problem_obs_table, caption = "Measures of Influence of Potentially Problematic Observations")
+knitr::kable(problem_obs_table, caption = "Measures of Influence and Model Fit After Removing Selected Observations")
 ```
-For each potentially problematic observation, the transformed model was fitted using the same dataset but with the exclusion of the observation under inspection. Models were then compared to determine which observations to remove for highest model fit. By this process, the exclusion of both observations 824 and 728 was found to induce the highest model fit ($R^2=0.129$, $adjR^2=0.1236$). The exclusion of any of the remaining problematic observations would decrease model fit (see Table of Models), and thus with the motivation of a predictive model with high fit, the observations were retained in the dataset.
+For each potentially problematic observation, the transformed model was fitted using the same dataset but with the exclusion of the observation under inspection. Models were then compared to determine which observations to remove for highest model fit. By this process, the exclusion of both observations 824 and 728 was found to induce the highest model fit ($R^2=0.129$, $adjR^2=0.1236$). The exclusion of any of the remaining problematic observations would decrease model fit (see Table 2), and thus with the motivation of a predictive model with high fit, the observations were retained in the dataset.
 
 Several methods of variable selection were employed, such as full and partial F-tests, t-tests for individual predictors, and stepwise regression for AIC and BIC. All of these methods unanimously arrived at the same conclusion of finding the predictors *Age, Age2, Height, BPSysAve* and *BPDiaAve* to be statistically significant.  
 
-## Variable Selection
 ```{r,echo=FALSE,message=FALSE}
 #Partial F-Test
 partial_F <- Anova(clean_model, type = 3)
