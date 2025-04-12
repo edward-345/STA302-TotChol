@@ -1,8 +1,0 @@
----
-title: "Final"
-author: "Edward J. Lee"
-date: "2025-04-11"
-output: pdf_document
----
-
-Remarkable improvements in model assumptions were noticed in the diagnostic plots of the transformed model, such as residual plots showing approximately null relationships with residuals more evenly and widely dispersed across the fitted values. Figure QQ Plot Transformed also now shows the effectiveness of the Box-Cox transformation with its resulting nearly perfect normal distribution in the residuals. Metrics of model fit in the transformed model ($\( R^2 \)=0.1264$, $adj\( R^2 \)=0.121) also showed a large increase when compared to the preliminary model ($\( R^2 \)=0.07025$, $adj\( R^2 \)=0.06553). These metrics compared to other iterations of model transformations can be found in Table of Models.
