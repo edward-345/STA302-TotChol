@@ -1,6 +1,6 @@
 ---
 title: "Examining Predictors of HDL Cholestrol using NHANES Data"
-author: "Edward J. Lee, Yusuf Emre, Vincent Mazz"
+author: "Edward J. Lee, Yusuf Kenaroglu, Vincenzo Mazzolini"
 date: "2025-04-05"
 output: pdf_document
 editor_options: 
@@ -396,8 +396,7 @@ res_active_plot <- ggplot(
 A distinct convex curvilinear relationship is evident in Figure Scatterplot Matrix and Figure Residuals vs Age, indicative of a severe violation in linearity.
 The additional polynomial term *Age2*, the square of the *Age* variable vector, was included to capture this non-linear relationship between the *Age* predictor and dependent variable *TotChol*.
 
-Following this change, the Box-Cox transformation was applied to the dependent variable *TotChol*.
-This transformation aims to address violations in normality and homoscedasticity as indicated by the right-tailed skew seen in Figure QQ Plot, and fanning patterns of residuals shown by Figure Residuals vs Fitted.
+Following this change, the Box-Cox transformation was applied to the dependent variable *TotChol*. This transformation aims to address violations in normality and homoscedasticity as indicated by the right-tailed skew seen in Figure QQ Plot, and fanning patterns of residuals shown by Figure Residuals vs Fitted.
 Maximum likelihood was used to derive a lambda value ($\lambda$ = 0.1414) for the transformation by using functions from the R package *MASS* (Venables & Ripley, 2002) and default built-in algebraic operators as shown in Formula 2. This transformation was not applied to the predictor variables to preserve interpretability.
 
 $$Y^{(\lambda)} = \frac{Y^\lambda - 1}{\lambda}, \quad \lambda = 0.1414\tag{2}$$
@@ -409,7 +408,7 @@ Figure QQ Plot Transformed also now shows the effectiveness of the Box-Cox trans
 grid.arrange(qq_plot, res_fitted_plot, ncol = 2)
 ```
 
-Metrics of model fit in the transformed model ($R^2=0.1264$, $adjR^2=0.121,)$ also showed a large increase when compared to the preliminary model ($R^2=0.08085$, $adjR^2 =0.07583$).
+Metrics of model fit in the transformed model ($R^2=0.1264$, $adjR^2=0.121$, $F_{(8, 1280)} = 23.15, p < .001$ also showed a large increase when compared to the preliminary model ($R^2=0.08085$, $adjR^2 =0.07583$, $F_{(7, 1281)} = 16.1, p < .001$).
 Despite the polynomial untransformed model yielding higher fit, severe violations in normality motivated the use of the Box-Cox cocurrently.
 These metrics compared to other iterations of model transformations can be found in Table of Models.
 \newline
@@ -543,7 +542,7 @@ partial_F$Significant <- ifelse(partial_F$`Pr(>F)` < 0.05, "Yes", "No")
 knitr::kable(partial_F, caption="ANOVA Table of Transformed Model")
 ```
 
-```{r,echo=FALSE,message=FALSE}
+```{r,echo=FALSE,message=FALSE, include=FALSE}
 #Overall F-test given in summary(clean_model)
 #F-statistic: 23.66 on 8 and 1278 DF,  p-value: < 0.00000000000000022
 
@@ -568,37 +567,46 @@ AIC <- step(clean_model, direction="both")
 final_model <- lm(pb.TotChol ~ Age+Age2+Height+BPSysAve+BPDiaAve,
                     data=clean.frame)
 
+summary_final <- summary(final_model)
+
 final_confints <- confint(final_model)
 ```
-Results from a stepwise regression using AIC values further confirmed the need to remove redundant predictors *Weight*, *SmokeNow* and *PhysActiveDays*. This allowed for a final iteration of the fitted model with the optimal values of $AIC=-59.38$ and $BIC=-133.85$.
+Results from a stepwise regression using AIC values further confirmed the need to remove redundant predictors *Weight*, *SmokeNow* and *PhysActiveDays*. This allowed for a final iteration of the fitted model with the optimal values of $AIC=-59.38$ and $BIC=-133.85$ ($F_{(5, 1281)} = 37.73, p < .001$).
 
-## Final Model Inference and Results
+## Final Model Results
 The final regression model provides meaningful insight into the research question of identifying key predictors of total cholesterol levels.As the response variable is Box-Cox transformed, all interpretations are made on the transformed scale rather than in original mmol/L units.
 $$
 \hat{Y}^{(\lambda)}=\hat{\beta}_{Age}x_{Age} + \hat{\beta}_{Age2}x_{Age2}^2 + 
 \hat{\beta}_{Height}x_{Height} + \hat{\beta}_{BPSysAve}x_{BPSysAve} + \hat{\beta}_{BPDiaAve}x_{BPDiaAve} + \hat{\epsilon}
 $$
-Intercept (4.8098341) This is the expected value of the transformed total cholesterol when all predictors are 0.
-Since values like Age or Height can’t realistically be zero, the intercept itself isn't meaningful on its own.
-Age (0.0974977) When all other predictors are held constant, a 1-year increase in age is associated with an increase of 0.0975 units in the transformed cholesterol levels.
-$Age^2$ (-0.0009263) This negative coefficient reflects the curvilinear relationship of age and cholesterol levels.
-As age increases further, the rate of increase in cholesterol decreases and after a certain age, cholesterol begins to decline.
+```{r,echo=FALSE,message=FALSE}
+coef_table <- as.data.frame(coef(summary(final_model)))
+
+
+
+coef_table$`2.5 %` <- round(final_confints[, 1], 4)
+coef_table$`97.5 %` <- round(final_confints [, 2], 4)
+
+knitr::kable(coef_table, digits = 4, caption = "Final Model Coefficients with 95% Confidence Intervals")
+```
+***Intercept:*** This is the expected value of the transformed total cholesterol when all predictors are 0. Since values like Age or Height can’t realistically be zero, the intercept itself isn't meaningful on its own.
+
+***Age:*** When all other predictors are held constant, a 1-year increase in age is associated with an increase of 0.0975 units in the transformed cholesterol levels.
+
+***$Age^2$*** This negative coefficient reflects the curvilinear relationship of age and cholesterol levels. As age increases further, the rate of increase in cholesterol decreases and after a certain age, cholesterol begins to decline. 
 This quadratic effect answers the research question by confirming that age influences cholesterol negatively and positively at different times in life.
 Together, Age and $Age^2$ imply that middle-aged adults are likely to have the highest cholesterol while younger and older individuals have lower cholesterol.
-Height (-0.0098211) Each additional centimeter in height is associated with a decrease of about 0.0098 units in transformed cholesterol.
-This implies that taller individuals tend to have lower total cholesterol.
-Average Systolic Blood Pressure (BPSysAve, 0.0056469)\
-A 1 mmHg increase in systolic blood pressure is associated with an increase of about 0.0056 units in transformed cholesterol.
-This suggests that higher systolic pressure is linked with higher cholesterol, supporting the idea that these cardiovascular risk factors are correlated.
-Average Diastolic Blood Pressure (BPDiaAve, 0.0127101)\
-A 1 mmHg increase in diastolic blood pressure is associated with an increase of about 0.0127 units in transformed cholesterol.
-Notably, this effect is more than double the effect size of systolic pressure, suggesting that diastolic pressure may be a stronger predictor in this context.
 
-10-Fold cross validation was applied to the final model to assess predictability performance and overall model validation.
-As anticipated, the final model yielded the most optimal values of root mean square error ($RMSE=0.9751559$) and mean absolute error ($MAE=0.7694394$) when compared to other models.
-These values in comparison to other models can be found in Table of Model Validation below.
+***Height:*** Each additional centimeter in height is associated with a decrease of about 0.0098 units in transformed cholesterol. This implies that taller individuals tend to have lower total cholesterol.
 
-```{r,echo=FALSE,message=FALSE}
+***Average Systolic Blood Pressure (BPSysAve):***
+A 1 mmHg increase in systolic blood pressure is associated with an increase of about 0.0056 units in transformed cholesterol. This suggests that higher systolic pressure is linked with higher cholesterol, supporting the idea that these cardiovascular risk factors are correlated.
+
+***Average Diastolic Blood Pressure (BPDiaAve):***
+A 1 mmHg increase in diastolic blood pressure is associated with an increase of about 0.0127 units in transformed cholesterol. Notably, this effect is more than double the effect size of systolic pressure, suggesting that diastolic pressure may be a stronger predictor in this context.
+
+## Model Validation
+```{r,echo=FALSE,message=FALSE,include=FALSE}
 #PREDICTION ACCURACY
 set.seed(123)
 train_index <- sample(1:nrow(clean.frame), 0.7 * nrow(clean.frame))
@@ -612,9 +620,7 @@ predictions <- predict(validation_model, newdata = test_data)
 # Compare predictions to actual
 mean((predictions - test_data$pb.TotChol)^2)  # MSE
 sqrt(mean((predictions - test_data$pb.TotChol)^2))  # RMSE
-```
 
-```{r,echo=FALSE,message=FALSE}
 #K-Fold (10-Fold) MODEL VALIDATION
 library(caret)
 
@@ -627,10 +633,6 @@ cv_model <- train(
   trControl = train_control
 )
 
-print(cv_model)
-```
-
-```{r,echo=FALSE,message=FALSE}
 #FULL_MODEL VALIDATION
 train_control_full <- trainControl(method = "cv", number = 10)
 cv_full_model <- train(
@@ -640,26 +642,6 @@ cv_full_model <- train(
   trControl = train_control_full
 )
 
-print(cv_full_model)
-```
-
-```{r, echo=FALSE, message=FALSE}
-#NULL_MODEL VALIDATION
-
-train_control_null <- trainControl(method = "cv", number = 10)
-
-
-cv_null_model <- train(
-  x = data.frame(Intercept = rep(1, nrow(clean.frame))),
-  y = clean.frame$pb.TotChol,
-  method = "lm",
-  trControl = train_control_null
-)
-
-print(cv_null_model)
-```
-
-```{r,echo=FALSE,message=FALSE}
 #ORIGINAL MODEL VALIDATION
 train_original <- trainControl(method = "cv", number = 10)
 cv_original_model <- train(
@@ -669,10 +651,6 @@ cv_original_model <- train(
   trControl = train_original
 )
 
-print(cv_original_model)
-```
-
-```{r,echo=FALSE,message=FALSE}
 #ORIGINAL FULL MODEL VALIDATION
 train_full.og <- trainControl(method = "cv", number = 10)
 cv_full.og_model <- train(
@@ -681,16 +659,33 @@ cv_full.og_model <- train(
   method = "lm",
   trControl = train_full.og
 )
+```
+10-Fold cross validation was applied to the final model to assess predictability performance and overall model validation.
+As anticipated, the final model yielded the most optimal values of root mean square error ($RMSE=0.9751559$) and mean absolute error ($MAE=0.7694394$) when compared to other models. These values in comparison to other models can be found in Table of Model Validation below.
 
-print(cv_full.og_model)
+```{r,echo=FALSE,message=FALSE}
+validation_models <- list("Final" = cv_model,
+                          "Full" = cv_full_model,
+                          "Preliminary" = cv_full.og_model)
+
+validation_results <- lapply(validation_models, function(mod) {
+  perf <- mod$results[1, c("RMSE", "Rsquared", "MAE")]
+  return(perf)
+})
+
+results_table <- do.call(rbind, validation_results)
+
+results_table$Model <- rownames(results_table)
+rownames(results_table) <- NULL
+
+results_table <- results_table[, c("Model", "RMSE", "Rsquared", "MAE")]
+
+knitr::kable(results_table, caption="Comparison of Model Performance Metrics")
 ```
 
-These values (on the Box-Cox transformed scale) suggest that the final model’s predictions for the value of TotChol deviates by roughly 0.98 mmol/L with the absolute error on average being approximately 0.77 mmol/L.
-The R-squared value suggests only 13.7% of the variance in the transformed TotChol variable is explained by the predictors in the model.
-These values, despite being modest at best, are a significant improvement when compared to the preliminary model ($RMSE=1.042796$, $( R^2 )=0.0717131$, $MAE=0.8143652$).
+These values (on the Box-Cox transformed scale) suggest that the final model’s predictions for the transformed value of *TotChol* deviates by roughly 0.98 mmol/L with the absolute error on average being approximately 0.77 mmol/L. The R-squared value suggests only 13.7% of the variance in the transformed *TotChol* variable is explained by the predictors in the model. These values, despite being modest at best, are a significant improvement when compared to the preliminary model.
 
 ## Discussion
-
 In this study, we investigated the factors that influence the amount of total cholesterol levels in blood using NHANES (National Health and Nutrition Examination Survey) with a multiple linear regression model.
 Our final model included age, height, average diastolic and systolic blood pressure measurements, as well as a polynomial term for age as predictors.
 These predictors achieved the highest $R^2=0.1264$, our best attempt at modelling total cholesterol levels in blood.
@@ -771,6 +766,43 @@ Expanding the predictor set: Including variables such as alcohol consumption and
 Modelling for multiple response variables: Rather than modeling total HDL cholesterol alone, a multivariate approach that predicts LDL and triglycerides separately could be more thorough.
 
 Stratified analysis: Examining how predictors influence cholesterol levels differently by gender, ethnicity, or socioeconomic status may improve accuracy.
+
+\newpage
+## Author Contributions
+**Edward Junsyoung Lee**
+
+- Report write-up: Sections 4, 5
+
+- Statistical Analysis:
+
+  - Model transformation
+
+  - Influential points
+
+  - Variable selection
+
+**Yusuf Kenaroglu**
+
+- Report write-up: Sections 6, 7, 8
+
+- Statistical Analysis:
+
+  - Data cleaning
+
+  - Model verification
+
+  - K-fold
+
+**Vincenzo Mazzolini**
+
+- Report write-up: Sections 1, 2, 3
+
+- Statistical Analysis:
+
+  - Identifying influential points
+
+  - Lasso regression
+
 
 \newpage
 
