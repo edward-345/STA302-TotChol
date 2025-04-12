@@ -147,7 +147,6 @@ knitr::kable(summary_stats, caption="Summary Statistics of Continuous Predictors
 ```
 
 ## Preliminary Model Diagnostics
-
 ```{r,  echo=FALSE, message=FALSE, include=FALSE}
 #FITTED AND RESIDUAL VALUES OF PRELIMINARY MODEL
 pre_fitted <- fitted(model)
@@ -157,19 +156,16 @@ pre_residuals <- resid(model)
 pre_plot_data <- data.frame(pre_fitted = pre_fitted,
                             pre_residuals = pre_residuals)
 
-#PAIRWISE PLOTS OF ORIGINAL MODEL
-pre_pairwise_plot <- pairs(nhanes_data[, c("TotChol", "Age", "Weight", "Height", 
-                      "BPSysAve", "BPDiaAve", "SmokeNow", "PhysActiveDays")],
-      main = "Pairwise ScatterPlots of Preliminary Model",
-      col = "blue")
-
 #RESIDUALS VS FITTED
 pre_res_fitted_plot <- ggplot(data = pre_plot_data,
                           aes(x = pre_fitted, y = pre_residuals)) +
   geom_point(color = "blue", alpha = 0.5) +
   geom_hline(yintercept = 0, color = "red") +
   labs(title = "Residuals vs Fitted Values of Preliminary Model", 
-       x = "Fitted Values", y = "Residuals")
+       x = "Fitted Values", y = "Residuals") +
+  theme(plot.title = element_text(size = 7),
+        axis.title = element_text(size = 6),
+        aspect.ratio = 1)
 
 #NORMAL QQ PLOT
 pre_qq_plot <- ggplot(data = data.frame(pre_residuals = pre_residuals),
@@ -177,11 +173,14 @@ pre_qq_plot <- ggplot(data = data.frame(pre_residuals = pre_residuals),
   stat_qq() +
   stat_qq_line(color = "red") +
   labs(title = "Normal Q-Q Plot of Preliminary Model",
-       x = "Theoretical Quantiles", y = "Sample Quantiles")
+       x = "Theoretical Quantiles", y = "Sample Quantiles") +
+  theme(plot.title = element_text(size = 7),
+        axis.title = element_text(size = 6),
+        aspect.ratio = 1)
 
 pre_stres_values <- rstandard(model)
 
-pre_stres_plot <- hist(
+stresid_hist <- pre_stres_plot <- hist(
   pre_stres_values,
   xlab = "Standardized Residuals",
   main = "Standardized Residual Histogram of Preliminary Model")
@@ -192,7 +191,9 @@ pre_res_age_plot <- ggplot(nhanes_data,
   geom_point(color = "blue", alpha = 0.5) +
   geom_hline(yintercept = 0, color = "red") +
   labs(title = "Residuals vs Age of Preliminary Model",
-       x = "Age", y = "Residuals")
+       x = "Age", y = "Residuals") +
+  theme(plot.title = element_text(size = 7),
+        axis.title = element_text(size = 6))
 
 #RESIDUALS VS WEIGHT
 pre_res_weight_plot <- ggplot(nhanes_data,
@@ -200,7 +201,10 @@ pre_res_weight_plot <- ggplot(nhanes_data,
   geom_point(color = "blue", alpha = 0.5) +
   geom_hline(yintercept = 0, color = "red") +
   labs(title = "Residuals vs Weight of Preliminary Model",
-       x = "Weight", y = "Residuals")
+       x = "Weight", y = "Residuals") +
+  theme(plot.title = element_text(size = 7),
+        axis.title = element_text(size = 6),
+        aspect.ratio = 1)
 
 #RESIDUALS VS HEIGHT
 pre_res_height_plot <- ggplot(nhanes_data,
@@ -208,7 +212,10 @@ pre_res_height_plot <- ggplot(nhanes_data,
   geom_point(color = "blue", alpha = 0.5) +
   geom_hline(yintercept = 0, color = "red") +
   labs(title = "Residuals vs Height of Preliminary Model",
-       x = "Height", y = "Residuals")
+       x = "Height", y = "Residuals") +
+  theme(plot.title = element_text(size = 7),
+        axis.title = element_text(size = 6),
+        aspect.ratio = 1)
 
 #RESIDUALS VS BPSysAve
 pre_res_BPSysAve_plot <- ggplot(nhanes_data,
@@ -216,7 +223,10 @@ pre_res_BPSysAve_plot <- ggplot(nhanes_data,
   geom_point(color = "blue", alpha = 0.5) +
   geom_hline(yintercept = 0, color = "red") +
   labs(title = "Residuals vs BPSysAve of Preliminary Model",
-       x = "Average Systolic Blood Pressure", y = "Residuals")
+       x = "Average Systolic Blood Pressure", y = "Residuals") +
+  theme(plot.title = element_text(size = 7),
+        axis.title = element_text(size = 6),
+        aspect.ratio = 1)
 
 #RESIDUALS VS BPDiaAve
 pre_res_BPDiaAve_plot <- ggplot(nhanes_data,
@@ -224,7 +234,10 @@ pre_res_BPDiaAve_plot <- ggplot(nhanes_data,
   geom_point(color = "blue", alpha = 0.5) +
   geom_hline(yintercept = 0, color = "red") +
   labs(title = "Residuals vs BPDiasAve of Preliminary Model",
-       x = "Average Diastolic Blood Pressure", y = "Residuals")
+       x = "Average Diastolic Blood Pressure", y = "Residuals") +
+  theme(plot.title = element_text(size = 7),
+        axis.title = element_text(size = 6),
+        aspect.ratio = 1)
 
 #RESIDUALS VS SmokeNow (BOXPLOT)
 pre_res_smoke_plot <- ggplot(
@@ -235,7 +248,10 @@ pre_res_smoke_plot <- ggplot(
   ggtitle("Residuals vs Current Smoker of Preliminary Model") +
   xlab("Currently Smokes") +
   ylab("Residuals") +
-  theme(axis.text.x = element_text(angle = 45, hjust = 1, size = 8))
+  theme(axis.text.x = element_text(angle = 45, hjust = 1, size = 8),
+        plot.title = element_text(size = 7),
+        axis.title = element_text(size = 6),
+        aspect.ratio = 1)
 
 #RESIDUALS VS PhysActiveDays (BOXPLOT)
 pre_res_active_plot <- ggplot(
@@ -247,9 +263,39 @@ pre_res_active_plot <- ggplot(
   ggtitle("Residuals vs Physically Active Days of Preliminary Model") +
   xlab("Days in a Week of Physical Activity") +
   ylab("Residuals") +
-  theme(axis.text.x = element_text(angle = 45, hjust = 1, size = 8))
-
+  theme(axis.text.x = element_text(angle = 45, hjust = 1, size = 8),
+        plot.title = element_text(size = 7),
+        axis.title = element_text(size = 6),
+        aspect.ratio = 1)
 ```
+A preliminary model was fitted using the variables described.
+$$
+\hat{Y}=\hat{\beta}_{Age}x_{Age} + \hat{\beta}_{Weight}x_{Weight} +
+\hat{\beta}_{Height}x_{Height} + \hat{\beta}_{BPSysAve}x_{BPSysAve} + \hat{\beta}_{BPDiaAve}x_{BPDiaAve} +
+$$
+$$
+ \hat{\beta}_{PhysActiveDays}x_{PhysActiveDays}+\hat{\beta}_{SmokeNowYes}x_{SmokeNowYes}+\hat{\epsilon}\tag{1}
+$$
+```{r,echo=FALSE,fig.cap="Pairwise Scatterplots of Preliminary Model Variables", out.width="100%"}
+#PAIRWISE PLOTS OF ORIGINAL MODEL
+pre_pairwise_plot <- pairs(nhanes_data[, c("TotChol", "Age", "Weight", "Height", 
+                      "BPSysAve", "BPDiaAve", "SmokeNow", "PhysActiveDays")],
+      main = "Pairwise ScatterPlots of Preliminary Model",
+      col = "blue")
+```
+As expected, the preliminary model is prone to multiple violations of model assumptions. Already distinct in the relationship between the predictor *Age* and the response variable *TotChol* is a nonlinear relationship that requires attention as a major violation of the linearity assumption (Figure 1). Further evidence of violations in linearity present themselves as clumping behaviors of residuals when plotted against predictors, particularly *BPSysAve* and *BPDiaAve* (see Appendix).  
+
+Further diagnostic checks indicate a right-skew in the residuals, suggesting the data do not meet the normality assumption (Figure 2). This skew can distort parameter estimates and confidence intervals, making them less reliable. The Residuals vs. Fitted plot in Figure 2 also shows a fanning pattern, which points to heteroscedasticity (unequal variance across different levels of the predictor). Furthermore, certain predictor ranges seem to cluster, hinting that the model may not capture all relevant patterns— we may need transformations (like logarithmic or polynomial) or more complex relationships.
+
+```{r,echo=FALSE,fig.cap="QQ-Plot and Residuals vs Fitted Plot of Preliminary Model.", out.width="100%"}
+grid.arrange(pre_qq_plot, pre_res_fitted_plot, ncol = 2)
+```
+
+These findings align with recommendations from Fox and Weisberg (2019), who point out that violating ordinary least squares (OLS) assumptions can weaken a model’s accuracy. They suggest robust regression techniques or transformations to fix skewness and heteroscedasticity. While we see no major signs of autocorrelation so far, it’s important to stay cautious, especially in studies involving repeated measurements or extended timeframes. Correcting these assumption breaches is vital because ignoring them can lead to flawed inferences.
+
+Beyond the diagnostic concerns, established research shows a clear link between demographic factors (like age and body size), blood pressure measures, and lipid levels (Ferrara et al. 1997; Henriksson et al. 2001). Kim et al. (2011) also underscores how high-density lipoprotein (HDL) and blood pressure interact to influence health outcomes, an effect that our model partially shows. However, differences in effect sizes or statistical significance could stem from population-specific factors or the previously mentioned assumption violations.
+
+In summary, our results generally align with prior studies on cardiovascular risk factors, but the issues of non-normal residuals, non-linearity, and heteroscedasticity must be addressed first. Employing transformations, adding non-linear terms, or using robust methods should happen before we interpret final outcomes. Once we refine the model, we can more confidently compare our results to the broader body of work on cardiovascular risk.
 
 ## Model Selection
 Preliminary model diagnostics indicated the model would benefit from modifications to improve model fit based on the indications of violated linear regression assumptions.
@@ -311,7 +357,9 @@ res_fitted_plot <- ggplot(data = plot_data,
   geom_hline(yintercept = 0, color = "red") +
   labs(title = "Residuals vs Fitted Values of Transformed Model", 
        x = "Fitted Values", y = "Residuals") +
-  theme(plot.title = element_text(size = 7), aspect.ratio = 1)
+  theme(plot.title = element_text(size = 7),
+        axis.title = element_text(size = 6),
+        aspect.ratio = 1)
 
 #NORMAL QQ PLOT
 qq_plot <- ggplot(data = data.frame(residuals = residuals),
@@ -320,7 +368,9 @@ qq_plot <- ggplot(data = data.frame(residuals = residuals),
   stat_qq_line(color = "red") +
   labs(title = "Normal Q-Q Plot of Transformed Model",
        x = "Theoretical Quantiles", y = "Sample Quantiles") +
-  theme(plot.title = element_text(size = 7),  aspect.ratio = 1)
+  theme(plot.title = element_text(size = 7),
+        axis.title = element_text(size = 6),
+        aspect.ratio = 1)
 
 tr_stres_values <- rstandard(p.BXCX.model)
 
@@ -335,7 +385,9 @@ res_age_plot <- ggplot(p.BXCX.frame,
   geom_point(color = "blue", alpha = 0.5) +
   geom_hline(yintercept = 0, color = "red") +
   labs(title = "Residuals vs Age of Transformed Model",
-       x = "Age", y = "Residuals")
+       x = "Age", y = "Residuals") +
+  theme(plot.title = element_text(size = 7),
+        axis.title = element_text(size = 6))
 
 #RESIDUALS VS WEIGHT
 res_weight_plot <- ggplot(p.BXCX.frame,
@@ -343,7 +395,10 @@ res_weight_plot <- ggplot(p.BXCX.frame,
   geom_point(color = "blue", alpha = 0.5) +
   geom_hline(yintercept = 0, color = "red") +
   labs(title = "Residuals vs Weight of Transformed Model",
-       x = "Weight", y = "Residuals")
+       x = "Weight", y = "Residuals") +
+  theme(plot.title = element_text(size = 7),
+        axis.title = element_text(size = 6),
+        aspect.ratio = 1)
 
 #RESIDUALS VS HEIGHT
 res_height_plot <- ggplot(p.BXCX.frame,
@@ -351,7 +406,10 @@ res_height_plot <- ggplot(p.BXCX.frame,
   geom_point(color = "blue", alpha = 0.5) +
   geom_hline(yintercept = 0, color = "red") +
   labs(title = "Residuals vs Height of Transformed Model",
-       x = "Height", y = "Residuals")
+       x = "Height", y = "Residuals") +
+  theme(plot.title = element_text(size = 7),
+        axis.title = element_text(size = 6),
+        aspect.ratio = 1)
 
 #RESIDUALS VS BPSysAve
 res_BPSysAve_plot <- ggplot(p.BXCX.frame,
@@ -359,7 +417,10 @@ res_BPSysAve_plot <- ggplot(p.BXCX.frame,
   geom_point(color = "blue", alpha = 0.5) +
   geom_hline(yintercept = 0, color = "red") +
   labs(title = "Residuals vs BPSysAve of Transformed Model",
-       x = "Average Systolic Blood Pressure", y = "Residuals")
+       x = "Average Systolic Blood Pressure", y = "Residuals") +
+  theme(plot.title = element_text(size = 7),
+        axis.title = element_text(size = 6),
+        aspect.ratio = 1)
 
 #RESIDUALS VS BPDiaAve
 res_BPDiaAve_plot <- ggplot(p.BXCX.frame,
@@ -367,7 +428,10 @@ res_BPDiaAve_plot <- ggplot(p.BXCX.frame,
   geom_point(color = "blue", alpha = 0.5) +
   geom_hline(yintercept = 0, color = "red") +
   labs(title = "Residuals vs BPDiasAve of Transformed Model",
-       x = "Average Diastolic Blood Pressure", y = "Residuals")
+       x = "Average Diastolic Blood Pressure", y = "Residuals") +
+  theme(plot.title = element_text(size = 7),
+        axis.title = element_text(size = 6),
+        aspect.ratio = 1)
 
 #RESIDUALS VS SmokeNow (BOXPLOT)
 res_smoke_plot <- ggplot(
@@ -378,7 +442,10 @@ res_smoke_plot <- ggplot(
   ggtitle("Residuals vs Current Smoker of Transformed Model") +
   xlab("Currently Smokes") +
   ylab("Residuals") +
-  theme(axis.text.x = element_text(angle = 45, hjust = 1, size = 8))
+  theme(axis.text.x = element_text(angle = 45, hjust = 1, size = 8),
+        plot.title = element_text(size = 7),
+        axis.title = element_text(size = 6),
+        aspect.ratio = 1)
 
 #RESIDUALS VS PhysActiveDays (BOXPLOT)
 res_active_plot <- ggplot(
@@ -390,19 +457,22 @@ res_active_plot <- ggplot(
   ggtitle("Residuals vs Physically Active Days of Transformed Model") +
   xlab("Days in a Week of Physical Activity") +
   ylab("Residuals") +
-  theme(axis.text.x = element_text(angle = 45, hjust = 1, size = 8))
+  theme(axis.text.x = element_text(angle = 45, hjust = 1, size = 8),
+        plot.title = element_text(size = 7),
+        axis.title = element_text(size = 6),
+        aspect.ratio = 1)
 ```
 
-A distinct convex curvilinear relationship is evident in Figure Scatterplot Matrix and Figure Residuals vs Age, indicative of a severe violation in linearity.
+A distinct convex curvilinear relationship is evident in Figure 1 and Figure 4 (see Appendix); indicative of a severe violation in linearity.
 The additional polynomial term *Age2*, the square of the *Age* variable vector, was included to capture this non-linear relationship between the *Age* predictor and dependent variable *TotChol*.
 
-Following this change, the Box-Cox transformation was applied to the dependent variable *TotChol*. This transformation aims to address violations in normality and homoscedasticity as indicated by the right-tailed skew seen in Figure QQ Plot, and fanning patterns of residuals shown by Figure Residuals vs Fitted.
+Following this change, the Box-Cox transformation was applied to the dependent variable *TotChol*. This transformation aims to address violations in normality and homoscedasticity as indicated by the right-tailed skew seen in the QQ plot, and fanning patterns of residuals shown by the Residuals vs Fitted plot of the preliminary model (Figure 2).
 Maximum likelihood was used to derive a lambda value ($\lambda$ = 0.1414) for the transformation by using functions from the R package *MASS* (Venables & Ripley, 2002) and default built-in algebraic operators as shown in Formula 2. This transformation was not applied to the predictor variables to preserve interpretability.
 
 $$Y^{(\lambda)} = \frac{Y^\lambda - 1}{\lambda}, \quad \lambda = 0.1414\tag{2}$$
 
 Remarkable improvements in model assumptions were noticed in the diagnostic plots of the transformed model, such as residual plots showing approximately null relationships with residuals more evenly and widely dispersed across the fitted values.
-Figure QQ Plot Transformed also now shows the effectiveness of the Box-Cox transformation with its resulting nearly perfect normal distribution in the residuals.
+The QQ plot in Figure 3 also now shows the effectiveness of the Box-Cox transformation with its resulting nearly perfect normal distribution in the residuals.
 
 ```{r, echo=FALSE,fig.cap="QQ-Plot and Residuals vs Fitted Plot of Transformed Model.", out.width="100%"}
 grid.arrange(qq_plot, res_fitted_plot, ncol = 2)
@@ -410,7 +480,7 @@ grid.arrange(qq_plot, res_fitted_plot, ncol = 2)
 
 Metrics of model fit in the transformed model ($R^2=0.1264$, $adjR^2=0.121$, $F_{(8, 1280)} = 23.15, p < .001$ also showed a large increase when compared to the preliminary model ($R^2=0.08085$, $adjR^2 =0.07583$, $F_{(7, 1281)} = 16.1, p < .001$).
 Despite the polynomial untransformed model yielding higher fit, severe violations in normality motivated the use of the Box-Cox cocurrently.
-These metrics compared to other iterations of model transformations can be found in Table of Models.
+These metrics compared to other iterations of model transformations can be found in Table 3.
 \newline
 
 ```{r, echo=FALSE, out.width="100%"}
@@ -498,7 +568,7 @@ summary(clean_model)
 
 Outliers were identified by checking standardized residuals, and influential observations were identified based on their measurements of leverage, Cook’s Distance, Difference in Fits (DFFITS) and Differences in Beta Coefficients (DFBETAS). If an observation had any of these measures surpass their respective thresholds and were concurrently highlighted by the *influenceIndexPlot()* function from the R package *car* (Fox & Weisberg, 2019) they were flagged as problematic observations.
 
-Based on this criteria, five potentially problematic observations were identified, of which only observation 823 and 728 were removed from the data set. A summary of these observations and their measures of leverage are present in Table 2.
+Based on this criteria, five potentially problematic observations were identified, of which only observation 823 and 728 were removed from the data set. A summary of these observations and their measures of leverage are present in Table 4.
 
 ```{r, echo=FALSE}
 problem_obs <- c(10, 968, 724, 823, 728)
@@ -532,7 +602,6 @@ By this process, the exclusion of both observations 824 and 728 was found to ind
 
 Several methods of variable selection were employed, such as full and partial F-tests, t-tests for individual predictors, and stepwise regression for AIC and BIC. All of these methods unanimously arrived at the same conclusion of finding the predictors *Age, Age2, Height, BPSysAve* and *BPDiaAve* to be statistically significant at $\alpha=.05$.
 
-\newpage
 ```{r,echo=FALSE,message=FALSE}
 #Partial F-Test
 partial_F <- Anova(clean_model, type = 3)
@@ -577,7 +646,7 @@ Results from a stepwise regression using AIC values further confirmed the need t
 The final regression model provides meaningful insight into the research question of identifying key predictors of total cholesterol levels.As the response variable is Box-Cox transformed, all interpretations are made on the transformed scale rather than in original mmol/L units.
 $$
 \hat{Y}^{(\lambda)}=\hat{\beta}_{Age}x_{Age} + \hat{\beta}_{Age2}x_{Age2}^2 + 
-\hat{\beta}_{Height}x_{Height} + \hat{\beta}_{BPSysAve}x_{BPSysAve} + \hat{\beta}_{BPDiaAve}x_{BPDiaAve} + \hat{\epsilon}
+\hat{\beta}_{Height}x_{Height} + \hat{\beta}_{BPSysAve}x_{BPSysAve} + \hat{\beta}_{BPDiaAve}x_{BPDiaAve} + \hat{\epsilon}\tag{3}
 $$
 ```{r,echo=FALSE,message=FALSE}
 coef_table <- as.data.frame(coef(summary(final_model)))
@@ -661,7 +730,7 @@ cv_full.og_model <- train(
 )
 ```
 10-Fold cross validation was applied to the final model to assess predictability performance and overall model validation.
-As anticipated, the final model yielded the most optimal values of root mean square error ($RMSE=0.9751559$) and mean absolute error ($MAE=0.7694394$) when compared to other models. These values in comparison to other models can be found in Table of Model Validation below.
+As anticipated, the final model yielded the most optimal values of root mean square error ($RMSE=0.9751559$) and mean absolute error ($MAE=0.7694394$) when compared to other models. These values in comparison to other models can be found in Table 7.
 
 ```{r,echo=FALSE,message=FALSE}
 validation_models <- list("Final" = cv_model,
@@ -842,3 +911,27 @@ Nakamura, M., Yamamoto, Y., Imaoka, W., Kuroshima, T., Toragai, R., Ito, Y., Kan
 
 Venables, W. N., & Ripley, B. D. (2002). Modern applied statistics with S (4th ed.). Springer. https://www.stats.ox.ac.uk/pub/MASS4/ 
 \endgroup
+
+\newpage
+## Appendix
+### Diagnostic Plots of Preliminary Model
+```{r,echo=FALSE,fig.cap="Diagnostic Plots of Preliminary Model", out.width="100%"}
+grid.arrange(pre_res_age_plot, ncol=1)
+
+grid.arrange(pre_res_height_plot,pre_res_weight_plot, ncol = 2)
+
+grid.arrange(pre_res_BPSysAve_plot,pre_res_BPDiaAve_plot , ncol = 2)
+
+grid.arrange(pre_res_smoke_plot,pre_res_active_plot, ncol = 2)
+```
+
+### Diagnostic Plots of Transformed Polynomial Model
+```{r,echo=FALSE,fig.cap="Diagnostic Plots of Transformed Model", out.width="100%"}
+grid.arrange(res_age_plot, ncol=1)
+
+grid.arrange(res_height_plot,res_weight_plot, ncol = 2)
+
+grid.arrange(res_BPSysAve_plot,res_BPDiaAve_plot , ncol = 2)
+
+grid.arrange(res_smoke_plot,res_active_plot, ncol = 2)
+```
