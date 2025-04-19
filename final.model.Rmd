@@ -269,19 +269,25 @@ pre_res_active_plot <- ggplot(
         aspect.ratio = 1)
 ```
 A preliminary model was fitted using the variables described.
-$$
-\hat{Y}=\hat{\beta}_{Age}x_{Age} + \hat{\beta}_{Weight}x_{Weight} +
-\hat{\beta}_{Height}x_{Height} + \hat{\beta}_{BPSysAve}x_{BPSysAve} + \hat{\beta}_{BPDiaAve}x_{BPDiaAve} +
-$$
-$$
- \hat{\beta}_{PhysActiveDays}x_{PhysActiveDays}+\hat{\beta}_{SmokeNowYes}x_{SmokeNowYes}+\hat{\epsilon}\tag{1}
-$$
+```{r,echo=FALSE,message=FALSE}
+pre_coef_table <- as.data.frame(coef(summary(model)))
+
+pre_confints <- confint(model)
+
+pre_coef_table$`2.5 %` <- round(pre_confints[, 1], 4)
+pre_coef_table$`97.5 %` <- round(pre_confints [, 2], 4)
+
+knitr::kable(pre_coef_table, digits = 4, caption = "Preliminary Model Coefficients")
+```
+
 ```{r,echo=FALSE,fig.cap="Pairwise Scatterplots of Preliminary Model Variables", out.width="100%"}
 #PAIRWISE PLOTS OF ORIGINAL MODEL
 pre_pairwise_plot <- pairs(nhanes_data[, c("TotChol", "Age", "Weight", "Height", 
                       "BPSysAve", "BPDiaAve", "SmokeNow", "PhysActiveDays")],
       main = "Pairwise ScatterPlots of Preliminary Model",
-      col = "blue")
+      col = "blue",
+      cex = 0.2,
+      pch = 16)
 ```
 As expected, the preliminary model is prone to multiple violations of model assumptions. Already distinct in the relationship between the predictor *Age* and the response variable *TotChol* is a nonlinear relationship that requires attention as a major violation of the linearity assumption (Figure 1). Further evidence of violations in linearity present themselves as clumping behaviors of residuals when plotted against predictors, particularly *BPSysAve* and *BPDiaAve* (see Appendix).  
 
@@ -469,7 +475,7 @@ The additional polynomial term *Age2*, the square of the *Age* variable vector, 
 Following this change, the Box-Cox transformation was applied to the dependent variable *TotChol*. This transformation aims to address violations in normality and homoscedasticity as indicated by the right-tailed skew seen in the QQ plot, and fanning patterns of residuals shown by the Residuals vs Fitted plot of the preliminary model (Figure 2).
 Maximum likelihood was used to derive a lambda value ($\lambda$ = 0.1414) for the transformation by using functions from the R package *MASS* (Venables & Ripley, 2002) and default built-in algebraic operators as shown in Formula 2. This transformation was not applied to the predictor variables to preserve interpretability.
 
-$$Y^{(\lambda)} = \frac{Y^\lambda - 1}{\lambda}, \quad \lambda = 0.1414\tag{2}$$
+$$Y^{(\lambda)} = \frac{Y^\lambda - 1}{\lambda}, \quad \lambda = 0.1414\tag{1}$$
 
 Remarkable improvements in model assumptions were noticed in the diagnostic plots of the transformed model, such as residual plots showing approximately null relationships with residuals more evenly and widely dispersed across the fitted values.
 The QQ plot in Figure 3 also now shows the effectiveness of the Box-Cox transformation with its resulting nearly perfect normal distribution in the residuals.
@@ -646,7 +652,7 @@ Results from a stepwise regression using AIC values further confirmed the need t
 The final regression model provides meaningful insight into the research question of identifying key predictors of total cholesterol levels.As the response variable is Box-Cox transformed, all interpretations are made on the transformed scale rather than in original mmol/L units.
 $$
 \hat{Y}^{(\lambda)}=\hat{\beta}_{Age}x_{Age} + \hat{\beta}_{Age2}x_{Age2}^2 + 
-\hat{\beta}_{Height}x_{Height} + \hat{\beta}_{BPSysAve}x_{BPSysAve} + \hat{\beta}_{BPDiaAve}x_{BPDiaAve} + \hat{\epsilon}\tag{3}
+\hat{\beta}_{Height}x_{Height} + \hat{\beta}_{BPSysAve}x_{BPSysAve} + \hat{\beta}_{BPDiaAve}x_{BPDiaAve} + \hat{\epsilon}\tag{2}
 $$
 ```{r,echo=FALSE,message=FALSE}
 coef_table <- as.data.frame(coef(summary(final_model)))
@@ -914,8 +920,19 @@ Venables, W. N., & Ripley, B. D. (2002). Modern applied statistics with S (4th e
 
 \newpage
 ## Appendix
+
+### Preliminary Model Formula
+$$
+\hat{Y}=\hat{\beta}_{Age}x_{Age} + \hat{\beta}_{Weight}x_{Weight} +
+\hat{\beta}_{Height}x_{Height} + \hat{\beta}_{BPSysAve}x_{BPSysAve} + \hat{\beta}_{BPDiaAve}x_{BPDiaAve} +
+$$
+$$
+ \hat{\beta}_{PhysActiveDays}x_{PhysActiveDays}+\hat{\beta}_{SmokeNowYes}x_{SmokeNowYes}+\hat{\epsilon}\tag{3}
+$$
+
+
 ### Diagnostic Plots of Preliminary Model
-```{r,echo=FALSE,fig.cap="Diagnostic Plots of Preliminary Model", out.width="100%"}
+```{r,echo=FALSE,fig.cap="Residual Plots of Preliminary Model", out.width="100%"}
 grid.arrange(pre_res_age_plot, ncol=1)
 
 grid.arrange(pre_res_height_plot,pre_res_weight_plot, ncol = 2)
@@ -924,16 +941,19 @@ grid.arrange(pre_res_BPSysAve_plot,pre_res_BPDiaAve_plot , ncol = 2)
 
 grid.arrange(pre_res_smoke_plot,pre_res_active_plot, ncol = 2)
 ```
-
 \newpage
-
 ### Diagnostic Plots of Transformed Polynomial Model
-```{r,echo=FALSE,fig.cap="Diagnostic Plots of Transformed Model", out.width="100%"}
+```{r,echo=FALSE,fig.cap="Residual Plots of Transformed Model"}
 grid.arrange(res_age_plot, ncol=1)
-
+```
+\newpage
+```{r,echo=FALSE,fig.cap="Residual Plots of Transformed Model",}
 grid.arrange(res_height_plot,res_weight_plot, ncol = 2)
-
+```
+```{r,echo=FALSE,fig.cap="Residual Plots of Transformed Model"}
 grid.arrange(res_BPSysAve_plot,res_BPDiaAve_plot , ncol = 2)
+```
 
+```{r,echo=FALSE,fig.cap="Residual Plots of Transformed Model",out.width="100%"}
 grid.arrange(res_smoke_plot,res_active_plot, ncol = 2)
 ```
